@@ -5,7 +5,7 @@
 from pathlib import Path
 from typing import Optional
 
-from .config import Config
+from .config import Config, get_language_name
 from .models import SubtitleSegment, SubtitleFormat
 from .transcriber import Transcriber
 from .translator import create_translator
@@ -48,6 +48,11 @@ class TranslationPipeline:
             self._video_processor = VideoProcessor(self.config.video)
         return self._video_processor
     
+    def _get_output_suffix(self) -> str:
+        """获取输出文件的后缀标识"""
+        target_lang = self.config.translator.target_language.value
+        return f"_{target_lang}"
+    
     def process(
         self,
         video_path: str | Path,
@@ -75,10 +80,11 @@ class TranslationPipeline:
         else:
             output_dir = self.config.output_dir or video_path.parent
         
-        # 生成输出文件名
+        # 生成输出文件名（使用目标语言代码作为后缀）
         base_name = video_path.stem
-        srt_path = output_dir / f"{base_name}_cn.srt"
-        video_output_path = output_dir / f"{base_name}_cn{video_path.suffix}"
+        suffix = self._get_output_suffix()
+        srt_path = output_dir / f"{base_name}{suffix}.srt"
+        video_output_path = output_dir / f"{base_name}{suffix}{video_path.suffix}"
         
         # 打印处理信息
         self._print_header(video_path, output_dir)
@@ -134,12 +140,16 @@ class TranslationPipeline:
     
     def _print_header(self, video_path: Path, output_dir: Path):
         """打印处理头信息"""
+        source_lang = get_language_name(self.config.translator.source_language)
+        target_lang = get_language_name(self.config.translator.target_language)
+        
         progress.separator()
         progress.header("视频翻译工具")
         print(f"📁 输入视频: {video_path}")
         print(f"📁 输出目录: {output_dir}")
         print(f"🤖 Whisper 模型: {self.config.transcriber.model_name}")
         print(f"🌐 翻译引擎: {self.translator.name}")
+        print(f"🔤 翻译方向: {source_lang} → {target_lang}")
         progress.separator()
         print()
     

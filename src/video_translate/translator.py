@@ -1,12 +1,12 @@
 """
-翻译模块 - 支持多种翻译引擎
+翻译模块 - 支持多种翻译引擎和多语言翻译
 """
 
 from abc import ABC, abstractmethod
 from typing import Optional
 
 from .models import SubtitleSegment, TranslationResult
-from .config import TranslatorConfig, TranslatorType
+from .config import TranslatorConfig, TranslatorType, Language, get_language_name
 from .utils import progress
 
 
@@ -22,6 +22,26 @@ class BaseTranslator(ABC):
         """翻译器名称"""
         pass
     
+    @property
+    def source_lang(self) -> Language:
+        """源语言"""
+        return self.config.source_language
+    
+    @property
+    def target_lang(self) -> Language:
+        """目标语言"""
+        return self.config.target_language
+    
+    @property
+    def source_lang_name(self) -> str:
+        """源语言名称"""
+        return get_language_name(self.source_lang)
+    
+    @property
+    def target_lang_name(self) -> str:
+        """目标语言名称"""
+        return get_language_name(self.target_lang)
+    
     @abstractmethod
     def translate_text(self, text: str, context: str = "") -> str:
         """翻译单个文本"""
@@ -35,16 +55,12 @@ class BaseTranslator(ABC):
     def translate_segments(
         self,
         segments: list[SubtitleSegment],
-        source_language: str = "en",
-        target_language: str = "zh"
     ) -> TranslationResult:
         """
         翻译字幕片段
         
         Args:
             segments: 字幕片段列表
-            source_language: 源语言
-            target_language: 目标语言
         
         Returns:
             TranslationResult: 翻译结果
@@ -52,7 +68,10 @@ class BaseTranslator(ABC):
         batch_size = self.config.batch_size
         total = len(segments)
         
-        progress.translate(f"开始使用 {self.name} 翻译 {total} 个字幕片段...")
+        progress.translate(
+            f"开始使用 {self.name} 翻译 {total} 个字幕片段 "
+            f"({self.source_lang_name} → {self.target_lang_name})..."
+        )
         
         # 批量翻译
         for i in range(0, total, batch_size):
@@ -78,8 +97,8 @@ class BaseTranslator(ABC):
         
         return TranslationResult(
             segments=segments,
-            source_language=source_language,
-            target_language=target_language,
+            source_language=self.source_lang.value,
+            target_language=self.target_lang.value,
             translator=self.name
         )
     
@@ -138,28 +157,34 @@ class OpenAICompatibleTranslator(BaseTranslator):
         return self._client
     
     def _get_system_prompt(self, for_batch: bool = False) -> str:
-        """获取系统提示词"""
-        base_prompt = """你是一个专业的视频字幕翻译专家。请将英文翻译成简体中文。
+        """获取系统提示词，支持多语言"""
+        source_name = get_language_name(self.source_lang, native=False)
+        target_name = get_language_name(self.target_lang, native=False)
+        target_native = get_language_name(self.target_lang, native=True)
+        
+        base_prompt = f"""You are a professional video subtitle translator. Please translate from {source_name} to {target_name}.
 
-要求：
-1. 翻译要自然流畅，符合中文表达习惯
-2. 保持原文的语气和风格
-3. 技术术语可以保留英文或加括号注释"""
+Requirements:
+1. The translation should be natural and fluent, conforming to {target_native} expression habits
+2. Maintain the tone and style of the original text
+3. Technical terms can be kept in the original language or annotated in parentheses"""
         
         if for_batch:
             base_prompt += """
-4. 每行格式为 [编号] 翻译内容
-5. 保持原有的编号顺序"""
+4. Each line format: [number] translated content
+5. Maintain the original numbering order"""
         else:
-            base_prompt += "\n4. 只输出翻译结果，不要添加任何解释"
+            base_prompt += "\n4. Only output the translation result, do not add any explanation"
         
         return base_prompt
     
     def translate_text(self, text: str, context: str = "") -> str:
         """翻译单个文本"""
-        user_prompt = f"请翻译以下字幕文本：\n\n{text}"
+        target_name = get_language_name(self.target_lang, native=False)
+        
+        user_prompt = f"Please translate the following subtitle to {target_name}:\n\n{text}"
         if context:
-            user_prompt = f"上下文：{context}\n\n{user_prompt}"
+            user_prompt = f"Context: {context}\n\n{user_prompt}"
         
         response = self.client.chat.completions.create(
             model=self.config.model,
@@ -175,13 +200,14 @@ class OpenAICompatibleTranslator(BaseTranslator):
     
     def translate_batch(self, texts: list[str]) -> list[str]:
         """批量翻译文本"""
+        target_name = get_language_name(self.target_lang, native=False)
         batch_text = "\n".join([f"[{i+1}] {text}" for i, text in enumerate(texts)])
         
         response = self.client.chat.completions.create(
             model=self.config.model,
             messages=[
                 {"role": "system", "content": self._get_system_prompt(for_batch=True)},
-                {"role": "user", "content": f"请翻译以下字幕：\n\n{batch_text}"}
+                {"role": "user", "content": f"Please translate the following subtitles to {target_name}:\n\n{batch_text}"}
             ],
             temperature=self.config.temperature,
             max_tokens=self.config.max_tokens
@@ -206,11 +232,13 @@ class OpenAICompatibleTranslator(BaseTranslator):
     
     def _translate_batch_with_index(self, batch_text: str) -> str:
         """带编号的批量翻译"""
+        target_name = get_language_name(self.target_lang, native=False)
+        
         response = self.client.chat.completions.create(
             model=self.config.model,
             messages=[
                 {"role": "system", "content": self._get_system_prompt(for_batch=True)},
-                {"role": "user", "content": f"请翻译以下字幕：\n\n{batch_text}"}
+                {"role": "user", "content": f"Please translate the following subtitles to {target_name}:\n\n{batch_text}"}
             ],
             temperature=self.config.temperature,
             max_tokens=self.config.max_tokens

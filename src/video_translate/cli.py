@@ -14,21 +14,43 @@ from .config import (
     VideoConfig,
     TranslatorType,
     WhisperModel,
+    Language,
+    get_language_name,
 )
 from .pipeline import TranslationPipeline
 from . import __version__
 
 
+# 支持的语言代码列表
+SUPPORTED_LANGUAGES = Language.list_codes()
+
+
 def create_parser() -> argparse.ArgumentParser:
     """创建命令行参数解析器"""
+    
+    # 生成支持的语言列表字符串
+    lang_help = "支持的语言: " + ", ".join([
+        f"{lang.value}({get_language_name(lang)})" 
+        for lang in Language
+    ])
+    
     parser = argparse.ArgumentParser(
         prog="video-translate",
-        description="视频英文字幕翻译为中文字幕工具",
+        description="视频字幕翻译工具 - 支持多语言翻译",
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
+        epilog=f"""
 示例:
-  # 基本用法
+  # 英文翻译成中文（默认）
   video-translate video.mp4
+  
+  # 日语翻译成中文
+  video-translate video.mp4 --source ja --target zh
+  
+  # 英文翻译成日语
+  video-translate video.mp4 --source en --target ja
+  
+  # 中文翻译成英文
+  video-translate video.mp4 --source zh --target en
   
   # 使用更大的模型提高识别准确度
   video-translate video.mp4 --model large
@@ -36,14 +58,13 @@ def create_parser() -> argparse.ArgumentParser:
   # 只生成字幕文件，不嵌入视频
   video-translate video.mp4 --no-embed
   
-  # 生成硬字幕（烧录到视频中）
-  video-translate video.mp4 --hard-sub
-  
-  # 只输出中文字幕（不含原文）
-  video-translate video.mp4 --chinese-only
+  # 只输出目标语言字幕（不含原文）
+  video-translate video.mp4 --target-only
   
   # 使用 OpenAI 翻译
   video-translate video.mp4 --translator openai
+
+{lang_help}
 """
     )
     
@@ -59,18 +80,33 @@ def create_parser() -> argparse.ArgumentParser:
         help="输出目录"
     )
     
+    # 语言选项
+    parser.add_argument(
+        "-s", "--source",
+        default="en",
+        metavar="LANG",
+        help="源语言代码 (默认: en)"
+    )
+    
+    parser.add_argument(
+        "-t", "--target",
+        default="zh",
+        metavar="LANG",
+        help="目标语言代码 (默认: zh)"
+    )
+    
+    parser.add_argument(
+        "--list-languages",
+        action="store_true",
+        help="列出所有支持的语言"
+    )
+    
     # Whisper 选项
     parser.add_argument(
         "-m", "--model",
         default="base",
         choices=["tiny", "base", "small", "medium", "large"],
         help="Whisper 模型大小 (默认: base)"
-    )
-    
-    parser.add_argument(
-        "--language",
-        default="en",
-        help="源语言 (默认: en)"
     )
     
     # 翻译选项
@@ -98,15 +134,28 @@ def create_parser() -> argparse.ArgumentParser:
     
     # 字幕选项
     parser.add_argument(
+        "--target-only",
+        action="store_true",
+        help="只输出目标语言字幕，不包含原文"
+    )
+    
+    parser.add_argument(
+        "--source-first",
+        action="store_true",
+        help="源语言在上，目标语言在下"
+    )
+    
+    # 兼容旧选项
+    parser.add_argument(
         "--chinese-only",
         action="store_true",
-        help="只输出中文字幕，不包含英文原文"
+        help="(已废弃，请使用 --target-only) 只输出中文字幕"
     )
     
     parser.add_argument(
         "--english-first",
         action="store_true",
-        help="英文在上，中文在下"
+        help="(已废弃，请使用 --source-first) 英文在上"
     )
     
     # 视频选项
@@ -145,6 +194,28 @@ def create_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def list_languages():
+    """列出所有支持的语言"""
+    print("支持的语言:\n")
+    print(f"{'代码':<8} {'语言名称':<15} {'English Name':<15}")
+    print("-" * 40)
+    for lang in Language:
+        native_name = get_language_name(lang, native=True)
+        english_name = get_language_name(lang, native=False)
+        print(f"{lang.value:<8} {native_name:<15} {english_name:<15}")
+    print()
+
+
+def parse_language(code: str) -> Language:
+    """解析语言代码"""
+    try:
+        return Language.from_code(code)
+    except ValueError:
+        print(f"❌ 不支持的语言代码: {code}")
+        print(f"💡 使用 --list-languages 查看支持的语言")
+        sys.exit(1)
+
+
 def build_config(args: argparse.Namespace) -> Config:
     """从命令行参数构建配置"""
     
@@ -156,21 +227,31 @@ def build_config(args: argparse.Namespace) -> Config:
     # Whisper 模型
     whisper_model = WhisperModel(args.model)
     
+    # 解析语言
+    source_lang = parse_language(args.source)
+    target_lang = parse_language(args.target)
+    
+    # 处理兼容性选项
+    target_only = args.target_only or args.chinese_only
+    source_first = args.source_first or args.english_first
+    
     config = Config(
         transcriber=TranscriberConfig(
             model=whisper_model,
-            language=args.language,
+            language=args.source,  # Whisper 使用源语言
         ),
         translator=TranslatorConfig(
             type=translator_type,
             api_key=args.api_key,
             base_url=args.api_base,
             model=args.llm_model,
+            source_language=source_lang,
+            target_language=target_lang,
         ),
         subtitle=SubtitleConfig(
-            chinese_only=args.chinese_only,
-            bilingual=not args.chinese_only,
-            chinese_first=not args.english_first,
+            target_only=target_only,
+            bilingual=not target_only,
+            target_first=not source_first,
         ),
         video=VideoConfig(
             embed_subtitle=not args.no_embed,
@@ -187,6 +268,11 @@ def main(argv: list[str] = None):
     """命令行入口函数"""
     parser = create_parser()
     args = parser.parse_args(argv)
+    
+    # 处理 --list-languages 选项
+    if args.list_languages:
+        list_languages()
+        sys.exit(0)
     
     # 构建配置
     config = build_config(args)

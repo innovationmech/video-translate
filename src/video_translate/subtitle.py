@@ -54,16 +54,21 @@ class SubtitleWriter:
                 f.write(f"{seg.index}\n")
                 f.write(f"{format_timestamp(seg.start)} --> {format_timestamp(seg.end)}\n")
                 
-                if self.config.chinese_only:
+                if self.config.target_only:
+                    # 只输出目标语言（翻译结果）
                     f.write(f"{seg.translated}\n")
                 elif self.config.bilingual:
-                    if self.config.chinese_first:
+                    # 双语字幕
+                    if self.config.target_first:
+                        # 目标语言在上
                         f.write(f"{seg.translated}\n")
                         f.write(f"{seg.text}\n")
                     else:
+                        # 源语言在上
                         f.write(f"{seg.text}\n")
                         f.write(f"{seg.translated}\n")
                 else:
+                    # 只输出源语言
                     f.write(f"{seg.text}\n")
                 
                 f.write("\n")
@@ -77,10 +82,10 @@ class SubtitleWriter:
                 f.write(f"{seg.index}\n")
                 f.write(f"{format_vtt_timestamp(seg.start)} --> {format_vtt_timestamp(seg.end)}\n")
                 
-                if self.config.chinese_only:
+                if self.config.target_only:
                     f.write(f"{seg.translated}\n")
                 elif self.config.bilingual:
-                    if self.config.chinese_first:
+                    if self.config.target_first:
                         f.write(f"{seg.translated}\n")
                         f.write(f"{seg.text}\n")
                     else:
@@ -103,8 +108,8 @@ PlayDepth: 0
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
 Style: Default,PingFang SC,24,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,2,1,2,10,10,10,1
-Style: Chinese,PingFang SC,26,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,2,1,2,10,10,10,1
-Style: English,Arial,20,&H00CCCCCC,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,1,1,2,10,10,50,1
+Style: Target,PingFang SC,26,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,2,1,2,10,10,10,1
+Style: Source,Arial,20,&H00CCCCCC,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,1,1,2,10,10,50,1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
@@ -123,12 +128,12 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
                 start = format_ass_time(seg.start)
                 end = format_ass_time(seg.end)
                 
-                if self.config.chinese_only:
-                    f.write(f"Dialogue: 0,{start},{end},Chinese,,0,0,0,,{seg.translated}\n")
+                if self.config.target_only:
+                    f.write(f"Dialogue: 0,{start},{end},Target,,0,0,0,,{seg.translated}\n")
                 elif self.config.bilingual:
-                    # 双语字幕：中文和英文分两行
-                    f.write(f"Dialogue: 0,{start},{end},Chinese,,0,0,0,,{seg.translated}\n")
-                    f.write(f"Dialogue: 0,{start},{end},English,,0,0,0,,{seg.text}\n")
+                    # 双语字幕：目标语言和源语言分两行
+                    f.write(f"Dialogue: 0,{start},{end},Target,,0,0,0,,{seg.translated}\n")
+                    f.write(f"Dialogue: 0,{start},{end},Source,,0,0,0,,{seg.text}\n")
                 else:
                     f.write(f"Dialogue: 0,{start},{end},Default,,0,0,0,,{seg.text}\n")
 
