@@ -126,26 +126,36 @@ class VideoProcessor:
         output_path: Path
     ):
         """嵌入硬字幕（烧录到视频中）"""
-        # 处理字幕文件路径中的特殊字符
-        srt_escaped = str(subtitle_path).replace("\\", "\\\\").replace(":", "\\:").replace("'", "\\'")
+        import shutil
+        import tempfile
         
-        font_style = (
-            f"FontSize={self.config.font_size},"
-            f"FontName={self.config.font_name},"
-            "PrimaryColour=&HFFFFFF,"
-            "OutlineColour=&H000000,"
-            "Outline=2"
-        )
-        
-        cmd = [
-            "ffmpeg", "-y",
-            "-i", str(video_path),
-            "-vf", f"subtitles='{srt_escaped}':force_style='{font_style}'",
-            "-c:a", "copy",
-            str(output_path)
-        ]
-        
-        self._run_ffmpeg(cmd)
+        # 为避免特殊字符问题，将字幕文件复制到临时目录
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_srt = Path(temp_dir) / "subtitle.srt"
+            shutil.copy(subtitle_path, temp_srt)
+            
+            # 转义临时路径中可能的特殊字符
+            srt_escaped = str(temp_srt).replace("\\", "/").replace(":", "\\:")
+            
+            # 字体样式 - 注意 FontName 不要有空格问题
+            font_name = self.config.font_name.replace(" ", "\\ ")
+            font_style = (
+                f"FontSize={self.config.font_size},"
+                f"FontName={font_name},"
+                "PrimaryColour=&HFFFFFF,"
+                "OutlineColour=&H000000,"
+                "Outline=2"
+            )
+            
+            cmd = [
+                "ffmpeg", "-y",
+                "-i", str(video_path),
+                "-vf", f"subtitles={srt_escaped}:force_style='{font_style}'",
+                "-c:a", "copy",
+                str(output_path)
+            ]
+            
+            self._run_ffmpeg(cmd)
     
     def _run_ffmpeg(self, cmd: list[str]):
         """运行 FFmpeg 命令"""
