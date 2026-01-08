@@ -31,6 +31,8 @@ video-translate/
 │       └── utils.py         # 工具函数
 ├── pyproject.toml           # 项目配置
 ├── requirements.txt         # 依赖列表
+├── LICENSE                  # MIT 许可证
+├── .gitignore               # Git 忽略文件
 └── README.md
 ```
 
@@ -227,4 +229,6 @@ ruff check src/
 
 ## 📄 License
 
-MIT License
+本项目采用 [MIT License](LICENSE) 开源许可证。
+
+Copyright (c) 2026 innovationmech
