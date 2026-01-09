@@ -1,0 +1,88 @@
+name: 依赖更新检查
+
+on:
+  schedule:
+    # 每周一凌晨 3 点运行
+    - cron: '0 3 * * 1'
+  workflow_dispatch:
+
+jobs:
+  check-dependencies:
+    name: 检查依赖更新
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v4
+    
+    - name: 设置 Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+    
+    - name: 安装 uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        version: "latest"
+    
+    - name: 检查过时的依赖
+      run: |
+        uv pip install pip-check
+        uv sync
+        echo "📦 检查过时的依赖..."
+        uv pip list --outdated || true
+    
+    - name: 生成依赖报告
+      run: |
+        echo "# 依赖报告" > dependency-report.md
+        echo "" >> dependency-report.md
+        echo "## 当前依赖" >> dependency-report.md
+        uv pip list >> dependency-report.md
+        echo "" >> dependency-report.md
+        echo "## 过时依赖" >> dependency-report.md
+        uv pip list --outdated >> dependency-report.md || echo "所有依赖都是最新的！" >> dependency-report.md
+    
+    - name: 上传依赖报告
+      uses: actions/upload-artifact@v4
+      with:
+        name: dependency-report
+        path: dependency-report.md
+        retention-days: 30
+
+  security-audit:
+    name: 安全审计
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v4
+    
+    - name: 设置 Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+    
+    - name: 安装 uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        version: "latest"
+    
+    - name: 安装依赖
+      run: |
+        uv sync
+    
+    - name: 安全审计
+      run: |
+        uv pip install pip-audit
+        uv run pip-audit --format json --output audit-report.json
+      continue-on-error: true
+    
+    - name: 上传安全报告
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: security-audit-report
+        path: audit-report.json
+        retention-days: 30
+      continue-on-error: true
+

@@ -1,0 +1,173 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master, develop ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: 测试 (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v4
+    
+    - name: 设置 Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+    
+    - name: 安装 uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        version: "latest"
+    
+    - name: 缓存依赖
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cache/uv
+          .venv
+        key: ${{ runner.os }}-uv-${{ matrix.python-version }}-${{ hashFiles('**/pyproject.toml', '**/uv.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-uv-${{ matrix.python-version }}-
+          ${{ runner.os }}-uv-
+    
+    - name: 安装依赖
+      run: |
+        uv sync --extra dev
+    
+    - name: 运行测试
+      run: |
+        uv run pytest --cov=src --cov-report=xml --cov-report=term
+    
+    - name: 上传覆盖率报告到 Codecov
+      uses: codecov/codecov-action@v4
+      if: matrix.python-version == '3.12'
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
+      env:
+        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  lint:
+    name: 代码质量检查
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v4
+    
+    - name: 设置 Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+    
+    - name: 安装 uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        version: "latest"
+    
+    - name: 缓存依赖
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cache/uv
+          .venv
+        key: ${{ runner.os }}-uv-lint-${{ hashFiles('**/pyproject.toml', '**/uv.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-uv-lint-
+          ${{ runner.os }}-uv-
+    
+    - name: 安装依赖
+      run: |
+        uv sync --extra dev
+    
+    - name: 检查代码格式 (Black)
+      run: |
+        uv run black --check src/ tests/
+    
+    - name: 代码风格检查 (Ruff)
+      run: |
+        uv run ruff check src/ tests/
+    
+    - name: 类型检查 (MyPy)
+      run: |
+        uv run mypy src/
+      continue-on-error: true
+
+  build:
+    name: 构建检查
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v4
+    
+    - name: 设置 Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+    
+    - name: 安装 uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        version: "latest"
+    
+    - name: 安装构建工具
+      run: |
+        uv pip install --system build twine
+    
+    - name: 构建包
+      run: |
+        python -m build
+    
+    - name: 检查包
+      run: |
+        twine check dist/*
+    
+    - name: 上传构建产物
+      uses: actions/upload-artifact@v4
+      with:
+        name: dist-python-${{ github.sha }}
+        path: dist/
+        retention-days: 7
+
+  security:
+    name: 安全检查
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v4
+    
+    - name: 设置 Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+    
+    - name: 安装 uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        version: "latest"
+    
+    - name: 安装依赖
+      run: |
+        uv sync
+    
+    - name: 运行安全检查 (pip-audit)
+      run: |
+        uv pip install --system pip-audit
+        uv run pip-audit
+      continue-on-error: true
+
