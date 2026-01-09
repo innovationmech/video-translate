@@ -26,6 +26,7 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 DIST_DIR="$PROJECT_ROOT/dist"
 PYPI_URL="https://upload.pypi.org/legacy/"
 TEST_PYPI_URL="https://test.pypi.org/legacy/"
+PYPIRC_FILE="$HOME/.pypirc"
 
 info() {
     echo -e "${BLUE}[INFO]${NC} $1"
@@ -52,6 +53,59 @@ step() {
 check_uv() {
     if ! command -v uv &> /dev/null; then
         error "uv 未安装。请先安装: curl -LsSf https://astral.sh/uv/install.sh | sh"
+    fi
+}
+
+# 从 ~/.pypirc 读取凭据
+# 参数: $1 = 索引名称 (pypi 或 testpypi)
+# 返回: 设置 PYPI_USERNAME 和 PYPI_PASSWORD 变量
+read_pypirc() {
+    local index_name="$1"
+    
+    PYPI_USERNAME=""
+    PYPI_PASSWORD=""
+    
+    if [[ ! -f "$PYPIRC_FILE" ]]; then
+        warn "未找到 $PYPIRC_FILE 文件"
+        return 1
+    fi
+    
+    # 解析 .pypirc 文件
+    local in_section=false
+    local current_section=""
+    
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        # 去除首尾空白
+        line=$(echo "$line" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+        
+        # 跳过空行和注释
+        [[ -z "$line" || "$line" == \#* ]] && continue
+        
+        # 检测 section 头
+        if [[ "$line" =~ ^\[([^\]]+)\]$ ]]; then
+            current_section="${BASH_REMATCH[1]}"
+            if [[ "$current_section" == "$index_name" ]]; then
+                in_section=true
+            else
+                in_section=false
+            fi
+            continue
+        fi
+        
+        # 在目标 section 中读取键值对
+        if [[ "$in_section" == true ]]; then
+            if [[ "$line" =~ ^username[[:space:]]*=[[:space:]]*(.+)$ ]]; then
+                PYPI_USERNAME="${BASH_REMATCH[1]}"
+            elif [[ "$line" =~ ^password[[:space:]]*=[[:space:]]*(.+)$ ]]; then
+                PYPI_PASSWORD="${BASH_REMATCH[1]}"
+            fi
+        fi
+    done < "$PYPIRC_FILE"
+    
+    if [[ -n "$PYPI_USERNAME" && -n "$PYPI_PASSWORD" ]]; then
+        return 0
+    else
+        return 1
     fi
 }
 
@@ -171,24 +225,52 @@ publish_to_pypi() {
         return
     fi
     
-    # 检查认证信息
+    # 读取 pypirc 凭据
+    local pypirc_index="$target"
+    
     echo ""
     info "准备上传到 $index_name"
-    echo ""
-    echo "认证方式:"
-    echo "  1. 使用 API Token (推荐)"
-    echo "     - PyPI: https://pypi.org/manage/account/token/"
-    echo "     - TestPyPI: https://test.pypi.org/manage/account/token/"
-    echo ""
-    echo "  2. 设置环境变量:"
-    echo "     export UV_PUBLISH_TOKEN='pypi-xxxxx'"
-    echo ""
     
-    # 使用 uv publish 发布
-    if [[ "$target" == "testpypi" ]]; then
-        uv publish --publish-url "$publish_url"
+    if read_pypirc "$pypirc_index"; then
+        success "已从 $PYPIRC_FILE [$pypirc_index] 读取凭据"
+        info "用户名: $PYPI_USERNAME"
+        
+        # 使用 uv publish 发布 (带凭据)
+        if [[ "$target" == "testpypi" ]]; then
+            uv publish --publish-url "$publish_url" --username "$PYPI_USERNAME" --password "$PYPI_PASSWORD"
+        else
+            uv publish --username "$PYPI_USERNAME" --password "$PYPI_PASSWORD"
+        fi
     else
-        uv publish
+        warn "无法从 $PYPIRC_FILE 读取 [$pypirc_index] 配置"
+        echo ""
+        echo "请确保 ~/.pypirc 文件存在且格式正确:"
+        echo ""
+        echo "  [pypi]"
+        echo "  username = __token__"
+        echo "  password = pypi-xxxxx"
+        echo ""
+        echo "  [testpypi]"
+        echo "  username = __token__"
+        echo "  password = pypi-xxxxx"
+        echo ""
+        echo "或者设置环境变量: UV_PUBLISH_TOKEN"
+        echo ""
+        
+        # 回退到默认行为 (让 uv 处理认证)
+        read -p "是否继续尝试发布 (uv 将提示输入凭据)? [y/N] " -n 1 -r
+        echo ""
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            info "已取消发布"
+            exit 0
+        fi
+        
+        # 使用 uv publish 发布 (无凭据，让 uv 提示)
+        if [[ "$target" == "testpypi" ]]; then
+            uv publish --publish-url "$publish_url"
+        else
+            uv publish
+        fi
     fi
     
     success "发布成功！"
@@ -226,13 +308,23 @@ show_help() {
     echo "  $0 --test             # 发布到 TestPyPI"
     echo "  $0 --test --dry-run   # 预览 TestPyPI 发布"
     echo ""
-    echo "环境变量:"
-    echo "  UV_PUBLISH_TOKEN      PyPI/TestPyPI API Token"
+    echo "认证配置:"
+    echo "  脚本会从 ~/.pypirc 文件读取凭据，文件格式示例:"
+    echo ""
+    echo "    [pypi]"
+    echo "    username = __token__"
+    echo "    password = pypi-xxxxx"
+    echo ""
+    echo "    [testpypi]"
+    echo "    username = __token__"
+    echo "    password = pypi-xxxxx"
     echo ""
     echo "首次发布前，请确保:"
     echo "  1. 在 PyPI/TestPyPI 注册账号"
     echo "  2. 创建 API Token"
-    echo "  3. 设置环境变量: export UV_PUBLISH_TOKEN='pypi-xxxxx'"
+    echo "     - PyPI: https://pypi.org/manage/account/token/"
+    echo "     - TestPyPI: https://test.pypi.org/manage/account/token/"
+    echo "  3. 配置 ~/.pypirc 文件"
 }
 
 # 主函数
