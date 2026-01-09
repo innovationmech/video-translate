@@ -2,32 +2,31 @@
 翻译模块测试
 """
 
-import pytest
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 
+from video_translate.config import (
+    Language,
+    TranslatorConfig,
+    TranslatorType,
+)
+from video_translate.models import SubtitleSegment
 from video_translate.translator import (
     BaseTranslator,
     OpenAICompatibleTranslator,
     create_translator,
 )
-from video_translate.config import (
-    TranslatorConfig,
-    TranslatorType,
-    Language,
-)
-from video_translate.models import SubtitleSegment
 
 
 class MockTranslator(BaseTranslator):
     """用于测试的模拟翻译器"""
-    
+
     @property
     def name(self) -> str:
         return "MockTranslator"
-    
+
     def translate_text(self, text: str, context: str = "") -> str:
         return f"[翻译] {text}"
-    
+
     def translate_batch(self, texts: list[str]) -> list[str]:
         return [f"[翻译] {t}" for t in texts]
 
@@ -62,9 +61,9 @@ class TestBaseTranslator:
             SubtitleSegment(index=1, start=0.0, end=2.0, text="Hello"),
             SubtitleSegment(index=2, start=2.0, end=4.0, text="World"),
         ]
-        
+
         result = translator.translate_segments(segments)
-        
+
         assert result.source_language == "en"
         assert result.target_language == "zh"
         assert result.translator == "MockTranslator"
@@ -76,10 +75,10 @@ class TestBaseTranslator:
             SubtitleSegment(index=1, start=0.0, end=2.0, text="Hello"),
             SubtitleSegment(index=2, start=2.0, end=4.0, text="World"),
         ]
-        
+
         translated_text = "[1] 你好\n[2] 世界"
         translator._parse_and_assign(segments, translated_text)
-        
+
         assert segments[0].translated == "你好"
         assert segments[1].translated == "世界"
 
@@ -89,11 +88,11 @@ class TestBaseTranslator:
         segments = [
             SubtitleSegment(index=1, start=0.0, end=2.0, text="Hello"),
         ]
-        
+
         # 无效格式应该被跳过
         translated_text = "Invalid format\nNo brackets here"
         translator._parse_and_assign(segments, translated_text)
-        
+
         assert segments[0].translated == ""  # 未被赋值
 
 
@@ -103,9 +102,7 @@ class TestOpenAICompatibleTranslator:
     def test_name_deepseek(self):
         """测试 DeepSeek 翻译器名称"""
         config = TranslatorConfig(
-            type=TranslatorType.DEEPSEEK,
-            api_key="test-key",
-            model="deepseek-chat"
+            type=TranslatorType.DEEPSEEK, api_key="test-key", model="deepseek-chat"
         )
         translator = OpenAICompatibleTranslator(config)
         assert "DeepSeek" in translator.name
@@ -113,9 +110,7 @@ class TestOpenAICompatibleTranslator:
     def test_name_openai(self):
         """测试 OpenAI 翻译器名称"""
         config = TranslatorConfig(
-            type=TranslatorType.OPENAI,
-            api_key="test-key",
-            model="gpt-4o-mini"
+            type=TranslatorType.OPENAI, api_key="test-key", model="gpt-4o-mini"
         )
         translator = OpenAICompatibleTranslator(config)
         assert "OpenAI" in translator.name
@@ -129,7 +124,7 @@ class TestOpenAICompatibleTranslator:
             target_language=Language.JAPANESE,
         )
         translator = OpenAICompatibleTranslator(config)
-        
+
         prompt = translator._get_system_prompt(for_batch=False)
         assert "English" in prompt
         assert "Japanese" in prompt
@@ -138,10 +133,10 @@ class TestOpenAICompatibleTranslator:
         """测试批量模式系统提示词"""
         config = TranslatorConfig(type=TranslatorType.DEEPSEEK, api_key="test-key")
         translator = OpenAICompatibleTranslator(config)
-        
-        prompt_single = translator._get_system_prompt(for_batch=False)
+
+        translator._get_system_prompt(for_batch=False)
         prompt_batch = translator._get_system_prompt(for_batch=True)
-        
+
         # 批量模式应该包含编号要求
         assert "number" in prompt_batch.lower()
         assert "numbering" in prompt_batch.lower() or "number" in prompt_batch.lower()
@@ -152,20 +147,17 @@ class TestOpenAICompatibleTranslator:
         # 设置 mock
         mock_client = Mock()
         mock_openai_class.return_value = mock_client
-        
+
         mock_response = Mock()
         mock_response.choices = [Mock()]
         mock_response.choices[0].message.content = "你好"
         mock_client.chat.completions.create.return_value = mock_response
-        
-        config = TranslatorConfig(
-            type=TranslatorType.DEEPSEEK,
-            api_key="test-key"
-        )
+
+        config = TranslatorConfig(type=TranslatorType.DEEPSEEK, api_key="test-key")
         translator = OpenAICompatibleTranslator(config)
-        
+
         result = translator.translate_text("Hello")
-        
+
         assert result == "你好"
         mock_client.chat.completions.create.assert_called_once()
 
@@ -175,20 +167,17 @@ class TestOpenAICompatibleTranslator:
         # 设置 mock
         mock_client = Mock()
         mock_openai_class.return_value = mock_client
-        
+
         mock_response = Mock()
         mock_response.choices = [Mock()]
         mock_response.choices[0].message.content = "[1] 你好\n[2] 世界"
         mock_client.chat.completions.create.return_value = mock_response
-        
-        config = TranslatorConfig(
-            type=TranslatorType.DEEPSEEK,
-            api_key="test-key"
-        )
+
+        config = TranslatorConfig(type=TranslatorType.DEEPSEEK, api_key="test-key")
         translator = OpenAICompatibleTranslator(config)
-        
+
         results = translator.translate_batch(["Hello", "World"])
-        
+
         assert len(results) == 2
         assert results[0] == "你好"
         assert results[1] == "世界"
@@ -196,18 +185,15 @@ class TestOpenAICompatibleTranslator:
     @patch("openai.OpenAI")
     def test_client_lazy_loading(self, mock_openai_class):
         """测试客户端延迟加载"""
-        config = TranslatorConfig(
-            type=TranslatorType.DEEPSEEK,
-            api_key="test-key"
-        )
+        config = TranslatorConfig(type=TranslatorType.DEEPSEEK, api_key="test-key")
         translator = OpenAICompatibleTranslator(config)
-        
+
         # 客户端应该还没有被创建
         assert translator._client is None
-        
+
         # 访问 client 属性
         _ = translator.client
-        
+
         # 现在应该被创建了
         assert mock_openai_class.called
 
@@ -217,23 +203,17 @@ class TestCreateTranslator:
 
     def test_create_deepseek_translator(self):
         """测试创建 DeepSeek 翻译器"""
-        config = TranslatorConfig(
-            type=TranslatorType.DEEPSEEK,
-            api_key="test-key"
-        )
+        config = TranslatorConfig(type=TranslatorType.DEEPSEEK, api_key="test-key")
         translator = create_translator(config)
-        
+
         assert isinstance(translator, OpenAICompatibleTranslator)
         assert "DeepSeek" in translator.name
 
     def test_create_openai_translator(self):
         """测试创建 OpenAI 翻译器"""
-        config = TranslatorConfig(
-            type=TranslatorType.OPENAI,
-            api_key="test-key"
-        )
+        config = TranslatorConfig(type=TranslatorType.OPENAI, api_key="test-key")
         translator = create_translator(config)
-        
+
         assert isinstance(translator, OpenAICompatibleTranslator)
         assert "OpenAI" in translator.name
 
@@ -250,7 +230,7 @@ class TestTranslationWithDifferentLanguages:
             target_language=Language.CHINESE,
         )
         translator = OpenAICompatibleTranslator(config)
-        
+
         prompt = translator._get_system_prompt()
         assert "English" in prompt
         assert "Chinese" in prompt
@@ -264,7 +244,7 @@ class TestTranslationWithDifferentLanguages:
             target_language=Language.JAPANESE,
         )
         translator = OpenAICompatibleTranslator(config)
-        
+
         prompt = translator._get_system_prompt()
         assert "Chinese" in prompt
         assert "Japanese" in prompt
@@ -278,7 +258,7 @@ class TestTranslationWithDifferentLanguages:
             target_language=Language.GERMAN,
         )
         translator = OpenAICompatibleTranslator(config)
-        
+
         prompt = translator._get_system_prompt()
         assert "French" in prompt
         assert "German" in prompt

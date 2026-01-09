@@ -3,20 +3,21 @@
 """
 
 import os
-import pytest
 from unittest.mock import patch
 
+import pytest
+
 from video_translate.config import (
-    TranslatorType,
-    WhisperModel,
-    Language,
     LANGUAGE_NAMES,
-    get_language_name,
-    TranslatorConfig,
-    TranscriberConfig,
-    SubtitleConfig,
-    VideoConfig,
     Config,
+    Language,
+    SubtitleConfig,
+    TranscriberConfig,
+    TranslatorConfig,
+    TranslatorType,
+    VideoConfig,
+    WhisperModel,
+    get_language_name,
 )
 
 
@@ -143,7 +144,7 @@ class TestTranslatorConfig:
             api_key="custom-key",
             model="gpt-4",
             temperature=0.7,
-            batch_size=5
+            batch_size=5,
         )
         assert config.api_key == "custom-key"
         assert config.model == "gpt-4"
@@ -153,8 +154,7 @@ class TestTranslatorConfig:
     def test_language_name_properties(self):
         """测试语言名称属性"""
         config = TranslatorConfig(
-            source_language=Language.ENGLISH,
-            target_language=Language.JAPANESE
+            source_language=Language.ENGLISH, target_language=Language.JAPANESE
         )
         assert config.source_language_name == "English"
         assert config.target_language_name == "日本語"
@@ -255,9 +255,7 @@ class TestConfig:
         """测试验证相同源语言和目标语言"""
         config = Config(
             translator=TranslatorConfig(
-                api_key="test",
-                source_language=Language.CHINESE,
-                target_language=Language.CHINESE
+                api_key="test", source_language=Language.CHINESE, target_language=Language.CHINESE
             )
         )
         errors = config.validate()
@@ -269,7 +267,7 @@ class TestConfig:
             translator=TranslatorConfig(
                 api_key="test-key",
                 source_language=Language.ENGLISH,
-                target_language=Language.CHINESE
+                target_language=Language.CHINESE,
             )
         )
         errors = config.validate()

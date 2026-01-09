@@ -2,17 +2,15 @@
 工具函数测试
 """
 
-import pytest
-from io import StringIO
 from unittest.mock import patch
 
 from video_translate.utils import (
+    ProgressReporter,
+    format_duration,
     format_timestamp,
     format_vtt_timestamp,
-    format_duration,
     get_device,
     get_device_name,
-    ProgressReporter,
 )
 
 

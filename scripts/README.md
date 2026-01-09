@@ -7,6 +7,7 @@
 | 脚本 | 用途 | 常用命令 |
 |------|------|----------|
 | `setup.sh` | 初始化开发环境 | `./scripts/setup.sh` |
+| `check.sh` | 代码质量和安全检查 | `./scripts/check.sh` |
 | `test.sh` | 运行测试套件 | `./scripts/test.sh` |
 | `build.sh` | 构建发行包 | `./scripts/build.sh` |
 | `bump_version.sh` | 更新版本号 | `./scripts/bump_version.sh patch` |
@@ -39,6 +40,87 @@
 3. **安装 Python 依赖** - 通过 `uv sync --dev` 安装
 4. **检查 API Key 配置** - 检查 DEEPSEEK_API_KEY 或 OPENAI_API_KEY
 5. **验证安装** - 测试命令行工具和模块导入
+
+---
+
+## 🔍 check.sh - 代码质量和安全检查
+
+**本地 CI 检查脚本**，用于在提交代码前运行，减少 CI 报错后的返工。
+
+### 基本用法
+
+```bash
+# 运行默认检查 (格式+风格+类型+安全+构建)
+./scripts/check.sh
+
+# 快速检查 (仅格式+风格)
+./scripts/check.sh --quick
+
+# 完整检查 (包含测试)
+./scripts/check.sh --full
+
+# 自动修复格式和风格问题
+./scripts/check.sh --fix
+```
+
+### 检查项目
+
+| 检查项 | 工具 | 说明 |
+|--------|------|------|
+| 代码格式 | Black | 检查/自动格式化代码风格 |
+| 代码风格 | Ruff | 检查代码质量问题 |
+| 类型检查 | MyPy | 静态类型分析 |
+| 安全检查 | pip-audit | 检查依赖安全漏洞 |
+| 构建检查 | build + twine | 验证包构建和完整性 |
+| 测试 | pytest | 运行单元测试（可选） |
+
+### 检查模式
+
+```bash
+# 快速检查 - 适合频繁运行
+./scripts/check.sh --quick
+
+# 严格模式 - 类型/安全检查失败也报错
+./scripts/check.sh --strict
+
+# 只运行特定检查
+./scripts/check.sh --format           # 只检查格式
+./scripts/check.sh --lint             # 只检查代码风格
+./scripts/check.sh --format --lint    # 组合多个检查
+```
+
+### 跳过特定检查
+
+```bash
+./scripts/check.sh --no-type      # 跳过类型检查
+./scripts/check.sh --no-security  # 跳过安全检查
+./scripts/check.sh --no-build     # 跳过构建检查
+```
+
+### Git Hooks 集成
+
+自动在提交/推送前运行检查：
+
+```bash
+# 安装 Git hooks
+./scripts/check.sh --install-hooks
+
+# 卸载 Git hooks
+./scripts/check.sh --uninstall-hooks
+```
+
+安装后：
+- **pre-commit**: 提交前自动运行快速检查
+- **pre-push**: 推送前自动运行完整检查
+
+### 推荐工作流
+
+| 场景 | 命令 |
+|------|------|
+| 开发过程中快速检查 | `./scripts/check.sh --quick --fix` |
+| 提交代码前 | `./scripts/check.sh` |
+| 推送代码前 | `./scripts/check.sh --full` |
+| 首次设置（安装 hooks） | `./scripts/check.sh --install-hooks` |
 
 ---
 
@@ -248,26 +330,32 @@ export UV_PUBLISH_TOKEN='pypi-xxxxx'
 git clone <repo-url>
 cd video-translate
 ./scripts/setup.sh
+
+# 可选：安装 Git hooks 自动化检查
+./scripts/check.sh --install-hooks
 ```
 
 ### 2. 日常开发
 
 ```bash
+# 快速代码检查（开发过程中频繁运行）
+./scripts/check.sh --quick --fix
+
 # 运行测试
 ./scripts/test.sh
 
 # 监视模式开发
 ./scripts/test.sh --watch
 
-# 完整检查
-./scripts/test.sh --full
+# 完整代码质量检查（提交前）
+./scripts/check.sh
 ```
 
 ### 3. 发布新版本
 
 ```bash
-# 1. 确保测试通过
-./scripts/test.sh --full
+# 1. 运行完整检查（与 CI 一致）
+./scripts/check.sh --full
 
 # 2. 更新版本号
 ./scripts/bump_version.sh patch
