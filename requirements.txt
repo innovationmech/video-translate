@@ -1,8 +1,10 @@
 # 视频字幕翻译工具依赖
-# 推荐使用: pip install -e .
-# 或者使用此文件: pip install -r requirements.txt
-
--e .
+# 推荐使用 uv 进行安装:
+#   uv sync                    # 同步所有依赖
+#   uv sync --dev              # 包含开发依赖
+#
+# 或者使用 pip:
+#   pip install -e .
 
 # FFmpeg 需要单独安装 (非 Python 包):
 # macOS: brew install ffmpeg

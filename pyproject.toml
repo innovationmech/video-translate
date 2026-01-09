@@ -1,6 +1,6 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
 name = "video-translate"
@@ -49,11 +49,15 @@ Homepage = "https://github.com/yourusername/video-translate"
 Repository = "https://github.com/yourusername/video-translate"
 Issues = "https://github.com/yourusername/video-translate/issues"
 
-[tool.setuptools.packages.find]
-where = ["src"]
+[tool.hatch.build.targets.wheel]
+packages = ["src/video_translate"]
 
-[tool.setuptools.package-dir]
-"" = "src"
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src",
+    "/README.md",
+    "/LICENSE",
+]
 
 [tool.black]
 line-length = 100

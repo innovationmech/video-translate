@@ -55,24 +55,37 @@ video-translate/
 
 ## 📦 安装
 
-### 1. 克隆项目
+### 1. 安装 uv（推荐）
+
+```bash
+# macOS/Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Windows
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
+### 2. 克隆项目
 
 ```bash
 git clone https://github.com/yourusername/video-translate.git
 cd video-translate
 ```
 
-### 2. 安装依赖
+### 3. 安装依赖
 
 ```bash
-# 使用 pip 安装（推荐）
-pip install -e .
+# 使用 uv 安装（推荐）
+uv sync
 
-# 或者只安装依赖
-pip install -r requirements.txt
+# 安装包含开发依赖
+uv sync --dev
+
+# 或者使用 pip
+pip install -e .
 ```
 
-### 3. 安装 FFmpeg
+### 5. 安装 FFmpeg
 
 **macOS:**
 ```bash
@@ -87,7 +100,7 @@ sudo apt update && sudo apt install ffmpeg
 **Windows:**
 下载并安装 [FFmpeg](https://ffmpeg.org/download.html)
 
-### 4. 设置 API Key
+### 6. 设置 API Key
 
 前往 [DeepSeek 开放平台](https://platform.deepseek.com/) 注册并获取 API Key
 
@@ -263,16 +276,19 @@ class MyTranslator(BaseTranslator):
 
 ```bash
 # 安装开发依赖
-pip install -e ".[dev]"
+uv sync --dev
 
 # 运行测试
-pytest
+uv run pytest
 
 # 代码格式化
-black src/
+uv run black src/
 
 # 代码检查
-ruff check src/
+uv run ruff check src/
+
+# 类型检查
+uv run mypy src/
 ```
 
 ## 📄 License
