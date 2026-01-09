@@ -2,13 +2,14 @@
 视频处理模块测试
 """
 
-import pytest
 import subprocess
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 
-from video_translate.video import VideoProcessor
+import pytest
+
 from video_translate.config import VideoConfig
+from video_translate.video import VideoProcessor
 
 
 class TestVideoProcessorStatic:
@@ -119,15 +120,15 @@ class TestEmbedSubtitle:
         subtitle_file = temp_dir / "test.srt"
         subtitle_file.write_text("1\n00:00:00,000 --> 00:00:02,000\nTest", encoding="utf-8")
         output_file = temp_dir / "output.mp4"
-        
+
         config = VideoConfig(soft_subtitle=True)
         processor = VideoProcessor(config)
-        
+
         result = processor.embed_subtitle(video_file, subtitle_file, output_file)
-        
+
         assert result == output_file
         mock_run_ffmpeg.assert_called_once()
-        
+
         # 检查调用参数
         call_args = mock_run_ffmpeg.call_args[0][0]
         assert "ffmpeg" in call_args
@@ -142,12 +143,12 @@ class TestEmbedSubtitle:
         subtitle_file = temp_dir / "test.srt"
         subtitle_file.write_text("1\n00:00:00,000 --> 00:00:02,000\nTest", encoding="utf-8")
         output_file = temp_dir / "output.mp4"
-        
+
         config = VideoConfig(soft_subtitle=False)
         processor = VideoProcessor(config)
-        
+
         processor.embed_subtitle(video_file, subtitle_file, output_file)
-        
+
         mock_run_ffmpeg.assert_called_once()
         call_args = mock_run_ffmpeg.call_args[0][0]
         assert "-vf" in call_args  # 硬字幕使用视频滤镜
@@ -157,12 +158,10 @@ class TestEmbedSubtitle:
         processor = VideoProcessor()
         subtitle_file = temp_dir / "test.srt"
         subtitle_file.touch()
-        
+
         with pytest.raises(FileNotFoundError) as exc_info:
             processor.embed_subtitle(
-                temp_dir / "nonexistent.mp4",
-                subtitle_file,
-                temp_dir / "output.mp4"
+                temp_dir / "nonexistent.mp4", subtitle_file, temp_dir / "output.mp4"
             )
         assert "视频文件" in str(exc_info.value)
 
@@ -171,12 +170,10 @@ class TestEmbedSubtitle:
         processor = VideoProcessor()
         video_file = temp_dir / "test.mp4"
         video_file.touch()
-        
+
         with pytest.raises(FileNotFoundError) as exc_info:
             processor.embed_subtitle(
-                video_file,
-                temp_dir / "nonexistent.srt",
-                temp_dir / "output.mp4"
+                video_file, temp_dir / "nonexistent.srt", temp_dir / "output.mp4"
             )
         assert "字幕文件" in str(exc_info.value)
 
@@ -188,13 +185,9 @@ class TestEmbedSubtitle:
         video_file.touch()
         subtitle_file = temp_dir / "test.srt"
         subtitle_file.touch()
-        
+
         with pytest.raises(RuntimeError) as exc_info:
-            processor.embed_subtitle(
-                video_file,
-                subtitle_file,
-                temp_dir / "output.mp4"
-            )
+            processor.embed_subtitle(video_file, subtitle_file, temp_dir / "output.mp4")
         assert "FFmpeg" in str(exc_info.value)
 
     @patch.object(VideoProcessor, "check_ffmpeg", return_value=True)
@@ -206,16 +199,15 @@ class TestEmbedSubtitle:
         subtitle_file = temp_dir / "test.srt"
         subtitle_file.write_text("1\n00:00:00,000 --> 00:00:02,000\nTest", encoding="utf-8")
         output_file = temp_dir / "output.mp4"
-        
+
         # 配置是软字幕，但调用时指定硬字幕
         config = VideoConfig(soft_subtitle=True)
         processor = VideoProcessor(config)
-        
+
         processor.embed_subtitle(
-            video_file, subtitle_file, output_file,
-            soft_subtitle=False  # 覆盖配置
+            video_file, subtitle_file, output_file, soft_subtitle=False  # 覆盖配置
         )
-        
+
         call_args = mock_run_ffmpeg.call_args[0][0]
         assert "-vf" in call_args  # 应该使用硬字幕
 
@@ -227,7 +219,7 @@ class TestRunFFmpeg:
     def test_run_ffmpeg_success(self, mock_run):
         """测试成功执行"""
         mock_run.return_value = Mock(returncode=0)
-        
+
         processor = VideoProcessor()
         # 应该不抛出异常
         processor._run_ffmpeg(["ffmpeg", "-version"])
@@ -235,10 +227,8 @@ class TestRunFFmpeg:
     @patch("subprocess.run")
     def test_run_ffmpeg_failure(self, mock_run):
         """测试执行失败"""
-        mock_run.side_effect = subprocess.CalledProcessError(
-            1, "ffmpeg", stderr="Error message"
-        )
-        
+        mock_run.side_effect = subprocess.CalledProcessError(1, "ffmpeg", stderr="Error message")
+
         processor = VideoProcessor()
         with pytest.raises(RuntimeError) as exc_info:
             processor._run_ffmpeg(["ffmpeg", "-invalid"])
@@ -254,10 +244,10 @@ class TestGetVideoInfo:
         mock_result = Mock()
         mock_result.stdout = '{"format": {"duration": "120.5"}}'
         mock_run.return_value = mock_result
-        
+
         processor = VideoProcessor()
         info = processor.get_video_info("test.mp4")
-        
+
         assert "format" in info
         assert info["format"]["duration"] == "120.5"
 
@@ -265,20 +255,20 @@ class TestGetVideoInfo:
     def test_get_video_info_failure(self, mock_run):
         """测试获取视频信息失败"""
         mock_run.side_effect = subprocess.CalledProcessError(1, "ffprobe")
-        
+
         processor = VideoProcessor()
         info = processor.get_video_info("test.mp4")
-        
+
         assert info == {}
 
     @patch("subprocess.run")
     def test_get_video_info_ffprobe_not_found(self, mock_run):
         """测试 ffprobe 未安装"""
         mock_run.side_effect = FileNotFoundError()
-        
+
         processor = VideoProcessor()
         info = processor.get_video_info("test.mp4")
-        
+
         assert info == {}
 
 
@@ -289,7 +279,7 @@ class TestVideoConfig:
         """测试字体设置"""
         config = VideoConfig(font_name="Arial", font_size=32)
         processor = VideoProcessor(config)
-        
+
         assert processor.config.font_name == "Arial"
         assert processor.config.font_size == 32
 
@@ -297,5 +287,5 @@ class TestVideoConfig:
         """测试嵌入字幕设置"""
         config = VideoConfig(embed_subtitle=False)
         processor = VideoProcessor(config)
-        
+
         assert processor.config.embed_subtitle is False

@@ -3,11 +3,11 @@
 """
 
 import pytest
+
 from video_translate.models import (
+    SubtitleFormat,
     SubtitleSegment,
     TranscriptionResult,
-    TranslationResult,
-    SubtitleFormat,
 )
 
 
@@ -68,7 +68,7 @@ class TestSubtitleSegment:
             "start": 10.0,
             "end": 12.5,
             "text": "Test text",
-            "translated": "测试文本"
+            "translated": "测试文本",
         }
         segment = SubtitleSegment.from_dict(data)
         assert segment.index == 5
@@ -79,12 +79,7 @@ class TestSubtitleSegment:
 
     def test_from_dict_without_translation(self):
         """测试从字典创建（无翻译字段）"""
-        data = {
-            "index": 1,
-            "start": 0.0,
-            "end": 2.0,
-            "text": "Hello"
-        }
+        data = {"index": 1, "start": 0.0, "end": 2.0, "text": "Hello"}
         segment = SubtitleSegment.from_dict(data)
         assert segment.translated == ""
 
