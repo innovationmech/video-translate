@@ -233,13 +233,23 @@ publish_to_pypi() {
     
     if read_pypirc "$pypirc_index"; then
         success "已从 $PYPIRC_FILE [$pypirc_index] 读取凭据"
-        info "用户名: $PYPI_USERNAME"
         
         # 使用 uv publish 发布 (带凭据)
-        if [[ "$target" == "testpypi" ]]; then
-            uv publish --publish-url "$publish_url" --username "$PYPI_USERNAME" --password "$PYPI_PASSWORD"
+        # 如果用户名是 __token__，使用 --token 参数
+        if [[ "$PYPI_USERNAME" == "__token__" ]]; then
+            info "使用 API Token 认证"
+            if [[ "$target" == "testpypi" ]]; then
+                uv publish --publish-url "$publish_url" --token "$PYPI_PASSWORD"
+            else
+                uv publish --token "$PYPI_PASSWORD"
+            fi
         else
-            uv publish --username "$PYPI_USERNAME" --password "$PYPI_PASSWORD"
+            info "用户名: $PYPI_USERNAME"
+            if [[ "$target" == "testpypi" ]]; then
+                uv publish --publish-url "$publish_url" --username "$PYPI_USERNAME" --password "$PYPI_PASSWORD"
+            else
+                uv publish --username "$PYPI_USERNAME" --password "$PYPI_PASSWORD"
+            fi
         fi
     else
         warn "无法从 $PYPIRC_FILE 读取 [$pypirc_index] 配置"
