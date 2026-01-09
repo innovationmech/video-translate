@@ -32,7 +32,7 @@ class Transcriber:
         try:
             import whisper
         except ImportError:
-            raise ImportError("请安装 openai-whisper: pip install openai-whisper")
+            raise ImportError("请安装 openai-whisper: pip install openai-whisper") from None
 
         progress.loading(f"加载 Whisper 模型: {self.config.model_name}")
         progress.device(f"使用设备: {get_device_name(self.device)}")

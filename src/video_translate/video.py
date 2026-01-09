@@ -156,10 +156,10 @@ class VideoProcessor:
     def _run_ffmpeg(self, cmd: list[str]):
         """运行 FFmpeg 命令"""
         try:
-            result = subprocess.run(cmd, check=True, capture_output=True, text=True)
+            subprocess.run(cmd, check=True, capture_output=True, text=True)
         except subprocess.CalledProcessError as e:
             progress.error(f"FFmpeg 错误: {e.stderr}")
-            raise RuntimeError(f"FFmpeg 处理失败: {e.stderr}")
+            raise RuntimeError(f"FFmpeg 处理失败: {e.stderr}") from e
 
     def get_video_info(self, video_path: str | Path) -> dict:
         """获取视频信息"""

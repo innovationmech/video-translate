@@ -118,10 +118,9 @@ class TestSubtitleWriter:
         output_path = temp_dir / "output.txt"
 
         # 创建一个假的格式来测试
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(ValueError):
             # 使用字符串来模拟不支持的格式
             writer.write(sample_segments, output_path, "unsupported")
-        # 错误消息应该包含 "不支持"
 
     def test_write_multiple_segments(self, temp_dir):
         """测试写入多个字幕片段"""
@@ -239,7 +238,7 @@ class TestRoundTrip:
         read_segments = SubtitleReader.read_srt(output_path)
 
         assert len(read_segments) == len(sample_segments)
-        for orig, read in zip(sample_segments, read_segments):
+        for orig, read in zip(sample_segments, read_segments, strict=True):
             assert read.index == orig.index
             assert read.start == pytest.approx(orig.start, abs=0.001)
             assert read.end == pytest.approx(orig.end, abs=0.001)

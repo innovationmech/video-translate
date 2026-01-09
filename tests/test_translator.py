@@ -134,7 +134,7 @@ class TestOpenAICompatibleTranslator:
         config = TranslatorConfig(type=TranslatorType.DEEPSEEK, api_key="test-key")
         translator = OpenAICompatibleTranslator(config)
 
-        prompt_single = translator._get_system_prompt(for_batch=False)
+        translator._get_system_prompt(for_batch=False)
         prompt_batch = translator._get_system_prompt(for_batch=True)
 
         # 批量模式应该包含编号要求

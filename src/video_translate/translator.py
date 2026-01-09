@@ -147,7 +147,7 @@ class OpenAICompatibleTranslator(BaseTranslator):
             try:
                 from openai import OpenAI
             except ImportError:
-                raise ImportError("请安装 openai: pip install openai")
+                raise ImportError("请安装 openai: pip install openai") from None
 
             self._client = OpenAI(api_key=self.config.api_key, base_url=self.config.base_url)
         return self._client
@@ -158,7 +158,8 @@ class OpenAICompatibleTranslator(BaseTranslator):
         target_name = get_language_name(self.target_lang, native=False)
         target_native = get_language_name(self.target_lang, native=True)
 
-        base_prompt = f"""You are a professional video subtitle translator. Please translate from {source_name} to {target_name}.
+        base_prompt = f"""You are a professional video subtitle translator. \
+Please translate from {source_name} to {target_name}.
 
 Requirements:
 1. The translation should be natural and fluent, conforming to {target_native} expression habits
@@ -205,7 +206,10 @@ Requirements:
                 {"role": "system", "content": self._get_system_prompt(for_batch=True)},
                 {
                     "role": "user",
-                    "content": f"Please translate the following subtitles to {target_name}:\n\n{batch_text}",
+                    "content": (
+                        f"Please translate the following subtitles to {target_name}:"
+                        f"\n\n{batch_text}"
+                    ),
                 },
             ],
             temperature=self.config.temperature,
@@ -239,7 +243,10 @@ Requirements:
                 {"role": "system", "content": self._get_system_prompt(for_batch=True)},
                 {
                     "role": "user",
-                    "content": f"Please translate the following subtitles to {target_name}:\n\n{batch_text}",
+                    "content": (
+                        f"Please translate the following subtitles to {target_name}:"
+                        f"\n\n{batch_text}"
+                    ),
                 },
             ],
             temperature=self.config.temperature,

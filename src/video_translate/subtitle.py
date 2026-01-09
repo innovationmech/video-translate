@@ -97,18 +97,37 @@ class SubtitleWriter:
 
     def _write_ass(self, segments: list[SubtitleSegment], output_path: Path):
         """写入 ASS 格式字幕"""
-        # ASS 文件头
-        header = """[Script Info]
+        # ASS 文件头 - 使用列表拼接避免行过长问题
+        style_format = (
+            "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, "
+            "OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, "
+            "ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, "
+            "Alignment, MarginL, MarginR, MarginV, Encoding"
+        )
+        style_default = (
+            "Style: Default,PingFang SC,24,&H00FFFFFF,&H000000FF,"
+            "&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,2,1,2,10,10,10,1"
+        )
+        style_target = (
+            "Style: Target,PingFang SC,26,&H00FFFFFF,&H000000FF,"
+            "&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,2,1,2,10,10,10,1"
+        )
+        style_source = (
+            "Style: Source,Arial,20,&H00CCCCCC,&H000000FF,"
+            "&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,1,1,2,10,10,50,1"
+        )
+
+        header = f"""[Script Info]
 Title: Video Translate Subtitles
 ScriptType: v4.00+
 Collisions: Normal
 PlayDepth: 0
 
 [V4+ Styles]
-Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Default,PingFang SC,24,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,2,1,2,10,10,10,1
-Style: Target,PingFang SC,26,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,2,1,2,10,10,10,1
-Style: Source,Arial,20,&H00CCCCCC,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,1,1,2,10,10,50,1
+{style_format}
+{style_default}
+{style_target}
+{style_source}
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text

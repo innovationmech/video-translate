@@ -40,25 +40,25 @@ def create_parser() -> argparse.ArgumentParser:
 示例:
   # 英文翻译成中文（默认）
   video-translate video.mp4
-  
+
   # 日语翻译成中文
   video-translate video.mp4 --source ja --target zh
-  
+
   # 英文翻译成日语
   video-translate video.mp4 --source en --target ja
-  
+
   # 中文翻译成英文
   video-translate video.mp4 --source zh --target en
-  
+
   # 使用更大的模型提高识别准确度
   video-translate video.mp4 --model large
-  
+
   # 只生成字幕文件，不嵌入视频
   video-translate video.mp4 --no-embed
-  
+
   # 只输出目标语言字幕（不含原文）
   video-translate video.mp4 --target-only
-  
+
   # 使用 OpenAI 翻译
   video-translate video.mp4 --translator openai
 
