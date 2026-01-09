@@ -55,37 +55,9 @@ video-translate/
 
 ## 📦 安装
 
-### 1. 安装 uv（推荐）
+### 前置依赖
 
-```bash
-# macOS/Linux
-curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# Windows
-powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
-```
-
-### 2. 克隆项目
-
-```bash
-git clone https://github.com/yourusername/video-translate.git
-cd video-translate
-```
-
-### 3. 安装依赖
-
-```bash
-# 使用 uv 安装（推荐）
-uv sync
-
-# 安装包含开发依赖
-uv sync --dev
-
-# 或者使用 pip
-pip install -e .
-```
-
-### 5. 安装 FFmpeg
+视频处理需要 FFmpeg，请先安装：
 
 **macOS:**
 ```bash
@@ -100,15 +72,49 @@ sudo apt update && sudo apt install ffmpeg
 **Windows:**
 下载并安装 [FFmpeg](https://ffmpeg.org/download.html)
 
-### 6. 设置 API Key
+### 快速安装（推荐）
 
-前往 [DeepSeek 开放平台](https://platform.deepseek.com/) 注册并获取 API Key
+```bash
+pip install video-translate
+```
+
+或使用 [uv](https://github.com/astral-sh/uv)（更快）：
+
+```bash
+uv pip install video-translate
+```
+
+### 开发安装
+
+如果你想参与开发或修改代码：
+
+```bash
+# 1. 克隆项目
+git clone https://github.com/yourusername/video-translate.git
+cd video-translate
+
+# 2. 安装 uv（如未安装）
+# macOS/Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh
+# Windows
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+
+# 3. 安装依赖（包含开发工具）
+uv sync --dev
+
+# 或使用 pip 以可编辑模式安装
+pip install -e ".[dev]"
+```
+
+### 设置 API Key
+
+前往 [DeepSeek 开放平台](https://platform.deepseek.com/) 注册并获取 API Key：
 
 ```bash
 export DEEPSEEK_API_KEY='your-api-key-here'
 ```
 
-或者使用 OpenAI:
+或者使用 OpenAI：
 ```bash
 export OPENAI_API_KEY='your-api-key-here'
 ```
