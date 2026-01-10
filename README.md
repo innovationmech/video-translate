@@ -1,63 +1,65 @@
-# 🎬 视频字幕翻译工具
+# 🎬 Video Subtitle Translation Tool
 
-将视频自动识别语音、翻译成目标语言，并生成字幕文件或嵌入视频。**支持 18 种语言互译**。
+Automatically transcribe video audio, translate to target language, and generate subtitle files or embed them into videos. **Supports translation between 18 languages**.
 
-## ✨ 功能特点
+[中文文档](README.zh.md) | [日本語ドキュメント](README.ja.md) | [한국어 문서](README.ko.md)
 
-- 🎤 **语音识别**: 使用 OpenAI Whisper 进行高精度语音识别
-- 🌐 **多语言翻译**: 支持 18 种语言互译（中、英、日、韩、法、德、西等）
-- 🤖 **多引擎支持**: 支持 DeepSeek、OpenAI 等翻译引擎
-- 📄 **字幕生成**: 支持 SRT、VTT、ASS 等多种字幕格式
-- 🎥 **字幕嵌入**: 支持软字幕和硬字幕两种方式
-- 🌍 **双语字幕**: 可选择生成双语字幕
-- 💰 **性价比高**: DeepSeek API 价格实惠，翻译质量优秀
-- 🏗️ **模块化设计**: 易于扩展和维护
+## ✨ Features
 
-## 🌍 支持的语言
+- 🎤 **Speech Recognition**: High-precision speech recognition using OpenAI Whisper
+- 🌐 **Multi-language Translation**: Supports translation between 18 languages (Chinese, English, Japanese, Korean, French, German, Spanish, etc.)
+- 🤖 **Multiple Engine Support**: Supports DeepSeek, OpenAI, and other translation engines
+- 📄 **Subtitle Generation**: Supports multiple subtitle formats including SRT, VTT, ASS
+- 🎥 **Subtitle Embedding**: Supports both soft and hard subtitle methods
+- 🌍 **Bilingual Subtitles**: Optional bilingual subtitle generation
+- 💰 **Cost-Effective**: DeepSeek API offers affordable pricing with excellent translation quality
+- 🏗️ **Modular Design**: Easy to extend and maintain
 
-| 代码 | 语言 | 代码 | 语言 |
-|------|------|------|------|
-| `zh` | 中文 | `en` | English |
-| `ja` | 日本語 | `ko` | 한국어 |
-| `fr` | Français | `de` | Deutsch |
-| `es` | Español | `ru` | Русский |
-| `pt` | Português | `it` | Italiano |
-| `nl` | Nederlands | `pl` | Polski |
-| `tr` | Türkçe | `ar` | العربية |
-| `hi` | हिन्दी | `th` | ไทย |
-| `vi` | Tiếng Việt | `id` | Bahasa Indonesia |
+## 🌍 Supported Languages
 
-使用 `video-translate --list-languages` 查看完整列表。
+| Code | Language | Code | Language |
+|------|----------|------|----------|
+| `zh` | Chinese (中文) | `en` | English |
+| `ja` | Japanese (日本語) | `ko` | Korean (한국어) |
+| `fr` | French (Français) | `de` | German (Deutsch) |
+| `es` | Spanish (Español) | `ru` | Russian (Русский) |
+| `pt` | Portuguese (Português) | `it` | Italian (Italiano) |
+| `nl` | Dutch (Nederlands) | `pl` | Polish (Polski) |
+| `tr` | Turkish (Türkçe) | `ar` | Arabic (العربية) |
+| `hi` | Hindi (हिन्दी) | `th` | Thai (ไทย) |
+| `vi` | Vietnamese (Tiếng Việt) | `id` | Indonesian (Bahasa Indonesia) |
 
-## 📁 项目结构
+Use `video-translate --list-languages` to view the complete list.
+
+## 📁 Project Structure
 
 ```
 video-translate/
 ├── src/
 │   └── video_translate/
-│       ├── __init__.py      # 包初始化
-│       ├── __main__.py      # 入口点
-│       ├── cli.py           # 命令行接口
-│       ├── config.py        # 配置管理
-│       ├── models.py        # 数据模型
-│       ├── transcriber.py   # 语音识别模块
-│       ├── translator.py    # 翻译模块
-│       ├── subtitle.py      # 字幕处理模块
-│       ├── video.py         # 视频处理模块
-│       ├── pipeline.py      # 处理流水线
-│       └── utils.py         # 工具函数
-├── pyproject.toml           # 项目配置
-├── requirements.txt         # 依赖列表
-├── LICENSE                  # MIT 许可证
-├── .gitignore               # Git 忽略文件
+│       ├── __init__.py      # Package initialization
+│       ├── __main__.py      # Entry point
+│       ├── cli.py           # Command-line interface
+│       ├── config.py        # Configuration management
+│       ├── models.py        # Data models
+│       ├── transcriber.py   # Speech recognition module
+│       ├── translator.py    # Translation module
+│       ├── subtitle.py      # Subtitle processing module
+│       ├── video.py         # Video processing module
+│       ├── pipeline.py      # Processing pipeline
+│       └── utils.py         # Utility functions
+├── pyproject.toml           # Project configuration
+├── requirements.txt         # Dependencies
+├── LICENSE                  # MIT License
+├── .gitignore               # Git ignore file
 └── README.md
 ```
 
-## 📦 安装
+## 📦 Installation
 
-### 前置依赖
+### Prerequisites
 
-视频处理需要 FFmpeg，请先安装：
+FFmpeg is required for video processing. Please install it first:
 
 **macOS:**
 ```bash
@@ -70,129 +72,129 @@ sudo apt update && sudo apt install ffmpeg
 ```
 
 **Windows:**
-下载并安装 [FFmpeg](https://ffmpeg.org/download.html)
+Download and install [FFmpeg](https://ffmpeg.org/download.html)
 
-### 快速安装（推荐）
+### Quick Installation (Recommended)
 
 ```bash
 pip install video-translate
 ```
 
-或使用 [uv](https://github.com/astral-sh/uv)（更快）：
+Or use [uv](https://github.com/astral-sh/uv) (faster):
 
 ```bash
 uv pip install video-translate
 ```
 
-### 开发安装
+### Development Installation
 
-如果你想参与开发或修改代码：
+If you want to contribute to development or modify the code:
 
 ```bash
-# 1. 克隆项目
+# 1. Clone the project
 git clone https://github.com/yourusername/video-translate.git
 cd video-translate
 
-# 2. 安装 uv（如未安装）
+# 2. Install uv (if not already installed)
 # macOS/Linux
 curl -LsSf https://astral.sh/uv/install.sh | sh
 # Windows
 powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
 
-# 3. 安装依赖（包含开发工具）
+# 3. Install dependencies (including dev tools)
 uv sync --dev
 
-# 或使用 pip 以可编辑模式安装
+# Or install with pip in editable mode
 pip install -e ".[dev]"
 ```
 
-### 设置 API Key
+### Set up API Key
 
-前往 [DeepSeek 开放平台](https://platform.deepseek.com/) 注册并获取 API Key：
+Register and get an API Key from [DeepSeek Open Platform](https://platform.deepseek.com/):
 
 ```bash
 export DEEPSEEK_API_KEY='your-api-key-here'
 ```
 
-或者使用 OpenAI：
+Or use OpenAI:
 ```bash
 export OPENAI_API_KEY='your-api-key-here'
 ```
 
-## 🚀 使用方法
+## 🚀 Usage
 
-### 命令行使用
+### Command Line Usage
 
 ```bash
-# 基本用法（英文 → 中文）
+# Basic usage (English → Chinese)
 video-translate video.mp4
 
-# 或者使用 python -m
+# Or use python -m
 python -m video_translate video.mp4
 ```
 
-### 多语言翻译示例
+### Multi-language Translation Examples
 
 ```bash
-# 英文 → 中文（默认）
+# English → Chinese (default)
 video-translate video.mp4
 
-# 日语 → 中文
+# Japanese → Chinese
 video-translate video.mp4 --source ja --target zh
 
-# 英文 → 日语
+# English → Japanese
 video-translate video.mp4 --source en --target ja
 
-# 中文 → 英文
+# Chinese → English
 video-translate video.mp4 --source zh --target en
 
-# 韩语 → 日语
+# Korean → Japanese
 video-translate video.mp4 --source ko --target ja
 
-# 法语 → 德语
+# French → German
 video-translate video.mp4 --source fr --target de
 ```
 
-### 命令行选项
+### Command Line Options
 
-| 选项 | 说明 |
-|------|------|
-| `-s, --source` | 源语言代码 (默认: en) |
-| `-t, --target` | 目标语言代码 (默认: zh) |
-| `--list-languages` | 列出所有支持的语言 |
-| `-o, --output` | 指定输出目录 |
-| `-m, --model` | Whisper 模型大小 (tiny/base/small/medium/large) |
-| `--translator` | 翻译引擎 (deepseek/openai) |
-| `--api-key` | 翻译 API Key |
-| `--target-only` | 只输出目标语言字幕，不含原文 |
-| `--source-first` | 源语言在上，目标语言在下 |
-| `--no-embed` | 不嵌入字幕到视频，只生成字幕文件 |
-| `--hard-sub` | 使用硬字幕（烧录到视频中） |
-| `--font-size` | 硬字幕字体大小 (默认: 24) |
+| Option | Description |
+|--------|-------------|
+| `-s, --source` | Source language code (default: en) |
+| `-t, --target` | Target language code (default: zh) |
+| `--list-languages` | List all supported languages |
+| `-o, --output` | Specify output directory |
+| `-m, --model` | Whisper model size (tiny/base/small/medium/large) |
+| `--translator` | Translation engine (deepseek/openai) |
+| `--api-key` | Translation API Key |
+| `--target-only` | Output only target language subtitles, without source text |
+| `--source-first` | Source language on top, target language below |
+| `--no-embed` | Don't embed subtitles into video, only generate subtitle files |
+| `--hard-sub` | Use hard subtitles (burned into video) |
+| `--font-size` | Hard subtitle font size (default: 24) |
 
-### 更多示例
+### More Examples
 
 ```bash
-# 使用更大的模型提高识别准确度
+# Use a larger model for better accuracy
 video-translate video.mp4 --model large
 
-# 只生成字幕文件，不嵌入视频
+# Only generate subtitle files, don't embed into video
 video-translate video.mp4 --no-embed
 
-# 生成硬字幕（烧录到视频中）
+# Generate hard subtitles (burned into video)
 video-translate video.mp4 --hard-sub
 
-# 只输出目标语言字幕
+# Output only target language subtitles
 video-translate video.mp4 --target-only
 
-# 使用 OpenAI 翻译
+# Use OpenAI translation
 video-translate video.mp4 --translator openai
 
-# 指定输出目录
+# Specify output directory
 video-translate video.mp4 -o ./output
 ```
 
-### 作为库使用
+### Use as a Library
 
 ```python
 from video_translate import (
@@ -205,11 +207,11 @@ from video_translate import (
     Language,
 )
 
-# 创建配置 - 日语翻译成中文
+# Create configuration - Japanese to Chinese translation
 config = Config(
     transcriber=TranscriberConfig(
         model=WhisperModel.BASE,
-        language="ja"  # 源语言
+        language="ja"  # Source language
     ),
     translator=TranslatorConfig(
         type=TranslatorType.DEEPSEEK,
@@ -219,34 +221,34 @@ config = Config(
     ),
 )
 
-# 创建处理流水线
+# Create processing pipeline
 pipeline = TranslationPipeline(config)
 
-# 处理视频
+# Process video
 result = pipeline.process("video.mp4")
 
-print(f"字幕文件: {result['subtitle_file']}")
-print(f"输出视频: {result['output_video']}")
+print(f"Subtitle file: {result['subtitle_file']}")
+print(f"Output video: {result['output_video']}")
 ```
 
-## 🤖 Whisper 模型选择
+## 🤖 Whisper Model Selection
 
-| 模型 | 大小 | 显存需求 | 速度 | 准确度 |
-|------|------|----------|------|--------|
-| tiny | 39M | ~1GB | 最快 | 较低 |
-| base | 74M | ~1GB | 快 | 中等 |
-| small | 244M | ~2GB | 中等 | 较高 |
-| medium | 769M | ~5GB | 较慢 | 高 |
-| large | 1550M | ~10GB | 慢 | 最高 |
+| Model | Size | Memory | Speed | Accuracy |
+|-------|------|--------|-------|----------|
+| tiny | 39M | ~1GB | Fastest | Lower |
+| base | 74M | ~1GB | Fast | Medium |
+| small | 244M | ~2GB | Medium | Good |
+| medium | 769M | ~5GB | Slow | High |
+| large | 1550M | ~10GB | Slowest | Highest |
 
-建议：
-- 快速预览：使用 `tiny` 或 `base`
-- 正式使用：使用 `small` 或 `medium`
-- 最高质量：使用 `large`
+Recommendations:
+- Quick preview: Use `tiny` or `base`
+- Production use: Use `small` or `medium`
+- Highest quality: Use `large`
 
-## 🔌 扩展翻译引擎
+## 🔌 Extending Translation Engines
 
-项目采用模块化设计，可以轻松添加新的翻译引擎：
+The project uses a modular design, making it easy to add new translation engines:
 
 ```python
 from video_translate.translator import BaseTranslator
@@ -255,50 +257,50 @@ class MyTranslator(BaseTranslator):
     @property
     def name(self) -> str:
         return "MyTranslator"
-    
+
     def translate_text(self, text: str, context: str = "") -> str:
-        # 实现翻译逻辑
+        # Implement translation logic
         pass
-    
+
     def translate_batch(self, texts: list[str]) -> list[str]:
-        # 实现批量翻译逻辑
+        # Implement batch translation logic
         pass
 ```
 
-## 📁 输出文件
+## 📁 Output Files
 
-- `视频名_{语言代码}.srt` - 字幕文件（如 `video_zh.srt`, `video_ja.srt`）
-- `视频名_{语言代码}.mp4` - 带字幕的视频（如果选择嵌入）
+- `videoname_{language_code}.srt` - Subtitle file (e.g., `video_zh.srt`, `video_ja.srt`)
+- `videoname_{language_code}.mp4` - Video with embedded subtitles (if embedding is selected)
 
-## ⚠️ 注意事项
+## ⚠️ Notes
 
-1. **首次运行**会自动下载 Whisper 模型，请确保网络畅通
-2. **硬字幕**会重新编码视频，耗时较长
-3. **软字幕**只复制流，速度快但某些播放器可能不支持
-4. 确保系统已安装 FFmpeg
-5. Apple Silicon Mac 会自动使用 MPS 加速
+1. **First run** will automatically download the Whisper model, please ensure a stable internet connection
+2. **Hard subtitles** will re-encode the video, which takes longer
+3. **Soft subtitles** only copy streams, faster but may not be supported by some players
+4. Ensure FFmpeg is installed on your system
+5. Apple Silicon Macs will automatically use MPS acceleration
 
-## 🛠️ 开发
+## 🛠️ Development
 
 ```bash
-# 安装开发依赖
+# Install development dependencies
 uv sync --dev
 
-# 运行测试
+# Run tests
 uv run pytest
 
-# 代码格式化
+# Code formatting
 uv run black src/
 
-# 代码检查
+# Code linting
 uv run ruff check src/
 
-# 类型检查
+# Type checking
 uv run mypy src/
 ```
 
 ## 📄 License
 
-本项目采用 [MIT License](LICENSE) 开源许可证。
+This project is open-sourced under the [MIT License](LICENSE).
 
 Copyright (c) 2026 innovationmech
