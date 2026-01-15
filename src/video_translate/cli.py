@@ -275,7 +275,9 @@ def main(argv: list[str] = None):
             progress.result(
                 status="success",
                 subtitle_file=str(result.get("subtitle_file", "")),
-                output_video=str(result.get("output_video", "")) if result.get("output_video") else None,
+                output_video=(
+                    str(result.get("output_video", "")) if result.get("output_video") else None
+                ),
             )
 
     except KeyboardInterrupt:

@@ -4,7 +4,6 @@
 
 import json
 import logging
-import sys
 from typing import Any
 
 # 设置日志
@@ -140,14 +139,16 @@ class ProgressReporter:
         self._total_steps = total
         if self.json_mode:
             step_name = self._step_names.get(step_num, "processing")
-            self._emit_json({
-                "type": "progress",
-                "step": step_num,
-                "total_steps": total,
-                "step_name": step_name,
-                "percent": 0,
-                "message": message,
-            })
+            self._emit_json(
+                {
+                    "type": "progress",
+                    "step": step_num,
+                    "total_steps": total,
+                    "step_name": step_name,
+                    "percent": 0,
+                    "message": message,
+                }
+            )
         else:
             print(f"{self._icon('📝')} [{step_num}/{total}] {message}")
 
@@ -155,14 +156,16 @@ class ProgressReporter:
         """报告当前步骤的进度百分比"""
         if self.json_mode:
             step_name = self._step_names.get(self._current_step, "processing")
-            self._emit_json({
-                "type": "progress",
-                "step": self._current_step,
-                "total_steps": self._total_steps,
-                "step_name": step_name,
-                "percent": percent,
-                "message": message,
-            })
+            self._emit_json(
+                {
+                    "type": "progress",
+                    "step": self._current_step,
+                    "total_steps": self._total_steps,
+                    "step_name": step_name,
+                    "percent": percent,
+                    "message": message,
+                }
+            )
 
     def result(
         self,
@@ -172,12 +175,14 @@ class ProgressReporter:
     ):
         """报告最终结果（仅 JSON 模式）"""
         if self.json_mode:
-            self._emit_json({
-                "type": "result",
-                "status": status,
-                "subtitle_file": subtitle_file,
-                "output_video": output_video,
-            })
+            self._emit_json(
+                {
+                    "type": "result",
+                    "status": status,
+                    "subtitle_file": subtitle_file,
+                    "output_video": output_video,
+                }
+            )
 
     def emit_error(self, message: str):
         """报告错误（仅 JSON 模式）"""
