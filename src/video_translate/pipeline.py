@@ -16,8 +16,9 @@ from .video import VideoProcessor
 class TranslationPipeline:
     """视频翻译处理流水线"""
 
-    def __init__(self, config: Config):
+    def __init__(self, config: Config, json_mode: bool = False):
         self.config = config
+        self.json_mode = json_mode
         self._transcriber: Transcriber | None = None
         self._translator = None
         self._subtitle_writer: SubtitleWriter | None = None
@@ -91,27 +92,39 @@ class TranslationPipeline:
         }
 
         # 步骤 1: 语音识别
-        progress.info("步骤 1/4: 语音识别")
+        progress.step(1, 4, "语音识别")
+        progress.progress(0, "正在加载 Whisper 模型...")
+        progress.progress(10, "正在提取音频...")
         transcription = self.transcriber.transcribe(video_path)
         segments = transcription.segments
+        progress.progress(100, f"识别到 {len(segments)} 条字幕")
 
         # 步骤 2: 翻译
-        progress.info("步骤 2/4: 翻译字幕")
-        translation = self.translator.translate_segments(segments)
+        progress.step(2, 4, "翻译字幕")
+        progress.progress(0, "正在初始化翻译引擎...")
+        translation = self.translator.translate_segments(
+            segments,
+            progress_callback=lambda p, m: progress.progress(p, m) if self.json_mode else None,
+        )
         segments = translation.segments
+        progress.progress(100, "翻译完成")
 
         # 步骤 3: 生成字幕文件
-        progress.info("步骤 3/4: 生成字幕文件")
+        progress.step(3, 4, "生成字幕文件")
+        progress.progress(0, "正在写入字幕文件...")
         self.subtitle_writer.write(segments, srt_path)
         result["subtitle_file"] = srt_path
+        progress.progress(100, f"字幕文件已保存: {srt_path.name}")
 
         # 步骤 4: 嵌入字幕（可选）
+        progress.step(4, 4, "嵌入字幕" if self.config.video.embed_subtitle else "跳过字幕嵌入")
         if self.config.video.embed_subtitle:
-            progress.info("步骤 4/4: 嵌入字幕")
+            progress.progress(0, "正在嵌入字幕到视频...")
             self.video_processor.embed_subtitle(video_path, srt_path, video_output_path)
             result["output_video"] = video_output_path
+            progress.progress(100, f"视频已保存: {video_output_path.name}")
         else:
-            progress.info("步骤 4/4: 跳过字幕嵌入")
+            progress.progress(100, "已跳过字幕嵌入")
 
         # 打印完成信息
         self._print_footer(result)
@@ -128,6 +141,9 @@ class TranslationPipeline:
 
     def _print_header(self, video_path: Path, output_dir: Path):
         """打印处理头信息"""
+        if self.json_mode:
+            return  # JSON 模式下不打印头信息
+
         source_lang = get_language_name(self.config.translator.source_language)
         target_lang = get_language_name(self.config.translator.target_language)
 
@@ -143,6 +159,9 @@ class TranslationPipeline:
 
     def _print_footer(self, result: dict):
         """打印完成信息"""
+        if self.json_mode:
+            return  # JSON 模式下不打印尾信息
+
         print()
         progress.separator()
         progress.success("处理完成!")

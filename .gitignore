@@ -94,3 +94,6 @@ Thumbs.db
 *.tmp
 *.temp
 .cache/
+
+# Desktop App (managed in separate private repo)
+video-translate-app/
