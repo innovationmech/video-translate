@@ -2,11 +2,22 @@
 视频处理模块 - 字幕嵌入等视频操作
 """
 
+import os
 import subprocess
 from pathlib import Path
 
 from .config import VideoConfig
 from .utils import progress
+
+
+def get_ffmpeg_path() -> str:
+    """获取 FFmpeg 可执行文件路径，支持环境变量覆盖"""
+    return os.environ.get("FFMPEG_PATH", "ffmpeg")
+
+
+def get_ffprobe_path() -> str:
+    """获取 FFprobe 可执行文件路径，支持环境变量覆盖"""
+    return os.environ.get("FFPROBE_PATH", "ffprobe")
 
 
 class VideoProcessor:
@@ -38,7 +49,8 @@ class VideoProcessor:
     def check_ffmpeg() -> bool:
         """检查 FFmpeg 是否可用"""
         try:
-            result = subprocess.run(["ffmpeg", "-version"], capture_output=True, text=True)
+            ffmpeg = get_ffmpeg_path()
+            result = subprocess.run([ffmpeg, "-version"], capture_output=True, text=True)
             return result.returncode == 0
         except FileNotFoundError:
             return False
@@ -97,7 +109,7 @@ class VideoProcessor:
         subtitle_codec = self.get_subtitle_codec(output_path)
 
         cmd = [
-            "ffmpeg",
+            get_ffmpeg_path(),
             "-y",
             "-i",
             str(video_path),
@@ -140,7 +152,7 @@ class VideoProcessor:
             )
 
             cmd = [
-                "ffmpeg",
+                get_ffmpeg_path(),
                 "-y",
                 "-i",
                 str(video_path),
@@ -166,7 +178,7 @@ class VideoProcessor:
         video_path = Path(video_path)
 
         cmd = [
-            "ffprobe",
+            get_ffprobe_path(),
             "-v",
             "quiet",
             "-print_format",
