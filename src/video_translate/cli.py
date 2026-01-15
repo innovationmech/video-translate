@@ -11,6 +11,7 @@ from .config import (
     Config,
     Language,
     SubtitleConfig,
+    SummaryConfig,
     TranscriberConfig,
     TranslatorConfig,
     TranslatorType,
@@ -127,6 +128,28 @@ def create_parser() -> argparse.ArgumentParser:
 
     parser.add_argument("--font-size", type=int, default=24, help="硬字幕字体大小 (默认: 24)")
 
+    # 总结选项
+    parser.add_argument("--no-summary", action="store_true", help="禁用视频内容总结功能")
+
+    parser.add_argument(
+        "--summary-lang",
+        metavar="LANG",
+        help="总结语言代码 (默认: 跟随目标语言)",
+    )
+
+    parser.add_argument(
+        "--max-key-points",
+        type=int,
+        default=5,
+        help="总结中最多关键点数量 (默认: 5)",
+    )
+
+    parser.add_argument(
+        "--no-timeline",
+        action="store_true",
+        help="总结中不包含时间线",
+    )
+
     # 其他选项
     parser.add_argument("-v", "--version", action="version", version=f"%(prog)s {__version__}")
 
@@ -183,6 +206,11 @@ def build_config(args: argparse.Namespace) -> Config:
     target_only = args.target_only or args.chinese_only
     source_first = args.source_first or args.english_first
 
+    # 解析总结语言
+    summary_lang = None
+    if args.summary_lang:
+        summary_lang = parse_language(args.summary_lang)
+
     config = Config(
         transcriber=TranscriberConfig(
             model=whisper_model,
@@ -205,6 +233,12 @@ def build_config(args: argparse.Namespace) -> Config:
             embed_subtitle=not args.no_embed,
             soft_subtitle=not args.hard_sub,
             font_size=args.font_size,
+        ),
+        summary=SummaryConfig(
+            enabled=not args.no_summary,
+            language=summary_lang,
+            max_key_points=args.max_key_points,
+            include_timeline=not args.no_timeline,
         ),
         output_dir=Path(args.output) if args.output else None,
     )
@@ -277,6 +311,9 @@ def main(argv: list[str] = None):
                 subtitle_file=str(result.get("subtitle_file", "")),
                 output_video=(
                     str(result.get("output_video", "")) if result.get("output_video") else None
+                ),
+                summary_file=(
+                    str(result.get("summary_file", "")) if result.get("summary_file") else None
                 ),
             )
 

@@ -14,6 +14,7 @@ from video_translate.config import (
     Config,
     Language,
     SubtitleConfig,
+    SummaryConfig,
     TranscriberConfig,
     TranslatorConfig,
     TranslatorType,
@@ -94,11 +95,18 @@ def default_video_config():
 
 
 @pytest.fixture
+def default_summary_config():
+    """创建默认总结配置"""
+    return SummaryConfig(enabled=True, language=None, max_key_points=5, include_timeline=True)
+
+
+@pytest.fixture
 def default_config(
     default_transcriber_config,
     default_translator_config,
     default_subtitle_config,
     default_video_config,
+    default_summary_config,
 ):
     """创建默认完整配置"""
     return Config(
@@ -106,6 +114,7 @@ def default_config(
         translator=default_translator_config,
         subtitle=default_subtitle_config,
         video=default_video_config,
+        summary=default_summary_config,
     )
 
 
