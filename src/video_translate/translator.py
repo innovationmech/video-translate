@@ -54,12 +54,14 @@ class BaseTranslator(ABC):
     def translate_segments(
         self,
         segments: list[SubtitleSegment],
+        progress_callback: callable = None,
     ) -> TranslationResult:
         """
         翻译字幕片段
 
         Args:
             segments: 字幕片段列表
+            progress_callback: 进度回调函数 (percent: int, message: str) -> None
 
         Returns:
             TranslationResult: 翻译结果
@@ -77,11 +79,17 @@ class BaseTranslator(ABC):
             batch = segments[i : i + batch_size]
             batch_text = "\n".join([f"[{seg.index}] {seg.text}" for seg in batch])
 
-            progress.step(
-                min(i + batch_size, total),
-                total,
-                f"翻译第 {i+1}-{min(i+batch_size, total)} 个片段...",
-            )
+            current_progress = int((i / total) * 100)
+            msg = f"翻译第 {i+1}-{min(i+batch_size, total)} 个片段..."
+
+            if progress_callback:
+                progress_callback(current_progress, msg)
+            else:
+                progress.step(
+                    min(i + batch_size, total),
+                    total,
+                    msg,
+                )
 
             translated = self._translate_batch_with_index(batch_text)
             self._parse_and_assign(batch, translated)
@@ -92,7 +100,10 @@ class BaseTranslator(ABC):
                 progress.warning(f"重新翻译第 {seg.index} 个片段...")
                 seg.translated = self.translate_text(seg.text)
 
-        progress.success("翻译完成")
+        if progress_callback:
+            progress_callback(100, "翻译完成")
+        else:
+            progress.success("翻译完成")
 
         return TranslationResult(
             segments=segments,

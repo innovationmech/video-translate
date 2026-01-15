@@ -132,6 +132,13 @@ def create_parser() -> argparse.ArgumentParser:
 
     parser.add_argument("--verbose", action="store_true", help="显示详细日志")
 
+    # JSON 进度输出（用于 GUI 集成）
+    parser.add_argument(
+        "--json-progress",
+        action="store_true",
+        help="输出 JSON 格式的进度信息（用于 GUI 集成）",
+    )
+
     return parser
 
 
@@ -207,8 +214,14 @@ def build_config(args: argparse.Namespace) -> Config:
 
 def main(argv: list[str] = None):
     """命令行入口函数"""
+    from .utils import progress
+
     parser = create_parser()
     args = parser.parse_args(argv)
+
+    # 启用 JSON 进度模式
+    json_mode = getattr(args, "json_progress", False)
+    progress.set_json_mode(json_mode)
 
     # 处理 --list-languages 选项
     if args.list_languages:
@@ -221,44 +234,65 @@ def main(argv: list[str] = None):
     # 验证配置
     errors = config.validate()
     if errors:
-        print("❌ 配置错误:")
-        for error in errors:
-            print(f"   - {error}")
-        print()
-
-        if not config.translator.api_key:
-            translator_type = config.translator.type.value.upper()
-            print(f"💡 请设置 {translator_type} API Key:")
-            print(f"   方式1: export {translator_type}_API_KEY='your-api-key'")
-            print("   方式2: video-translate video.mp4 --api-key 'your-api-key'")
+        if json_mode:
+            progress.emit_error("; ".join(errors))
+        else:
+            print("❌ 配置错误:")
+            for error in errors:
+                print(f"   - {error}")
             print()
 
-            if config.translator.type == TranslatorType.DEEPSEEK:
-                print("🔗 获取 API Key: https://platform.deepseek.com/")
-            elif config.translator.type == TranslatorType.OPENAI:
-                print("🔗 获取 API Key: https://platform.openai.com/")
+            if not config.translator.api_key:
+                translator_type = config.translator.type.value.upper()
+                print(f"💡 请设置 {translator_type} API Key:")
+                print(f"   方式1: export {translator_type}_API_KEY='your-api-key'")
+                print("   方式2: video-translate video.mp4 --api-key 'your-api-key'")
+                print()
+
+                if config.translator.type == TranslatorType.DEEPSEEK:
+                    print("🔗 获取 API Key: https://platform.deepseek.com/")
+                elif config.translator.type == TranslatorType.OPENAI:
+                    print("🔗 获取 API Key: https://platform.openai.com/")
 
         sys.exit(1)
 
     # 检查视频文件
     video_path = Path(args.video)
     if not video_path.exists():
-        print(f"❌ 视频文件不存在: {video_path}")
+        if json_mode:
+            progress.emit_error(f"视频文件不存在: {video_path}")
+        else:
+            print(f"❌ 视频文件不存在: {video_path}")
         sys.exit(1)
 
     # 运行处理流水线
     try:
-        pipeline = TranslationPipeline(config)
-        pipeline.process(video_path)
+        pipeline = TranslationPipeline(config, json_mode=json_mode)
+        result = pipeline.process(video_path)
+
+        # 在 JSON 模式下输出最终结果
+        if json_mode:
+            progress.result(
+                status="success",
+                subtitle_file=str(result.get("subtitle_file", "")),
+                output_video=str(result.get("output_video", "")) if result.get("output_video") else None,
+            )
+
     except KeyboardInterrupt:
-        print("\n⚠️ 用户中断")
+        if json_mode:
+            progress.emit_error("用户中断")
+        else:
+            print("\n⚠️ 用户中断")
         sys.exit(130)
     except Exception as e:
-        print(f"❌ 发生错误: {e}")
-        if args.verbose:
-            import traceback
+        if json_mode:
+            progress.emit_error(str(e))
+        else:
+            print(f"❌ 发生错误: {e}")
+            if args.verbose:
+                import traceback
 
-            traceback.print_exc()
+                traceback.print_exc()
         sys.exit(1)
 
 
