@@ -163,6 +163,16 @@ class VideoConfig:
 
 
 @dataclass
+class SummaryConfig:
+    """视频内容总结配置"""
+
+    enabled: bool = True  # 是否启用总结
+    language: Language | None = None  # 总结语言（默认跟随目标语言）
+    max_key_points: int = 5  # 最多关键点数量
+    include_timeline: bool = True  # 是否包含时间线
+
+
+@dataclass
 class Config:
     """主配置类"""
 
@@ -170,6 +180,7 @@ class Config:
     translator: TranslatorConfig = field(default_factory=TranslatorConfig)
     subtitle: SubtitleConfig = field(default_factory=SubtitleConfig)
     video: VideoConfig = field(default_factory=VideoConfig)
+    summary: SummaryConfig = field(default_factory=SummaryConfig)
     output_dir: Path | None = None
 
     @classmethod

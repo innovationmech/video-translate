@@ -90,12 +90,13 @@ class ProgressReporter:
         self.use_emoji = use_emoji
         self.json_mode = json_mode
         self._current_step = 0
-        self._total_steps = 4
+        self._total_steps = 5
         self._step_names = {
             1: "transcribing",
             2: "translating",
-            3: "generating",
-            4: "embedding",
+            3: "summarizing",
+            4: "generating",
+            5: "embedding",
         }
 
     def set_json_mode(self, enabled: bool):
@@ -172,6 +173,7 @@ class ProgressReporter:
         status: str,
         subtitle_file: str | None = None,
         output_video: str | None = None,
+        summary_file: str | None = None,
     ):
         """报告最终结果（仅 JSON 模式）"""
         if self.json_mode:
@@ -181,6 +183,7 @@ class ProgressReporter:
                     "status": status,
                     "subtitle_file": subtitle_file,
                     "output_video": output_video,
+                    "summary_file": summary_file,
                 }
             )
 
