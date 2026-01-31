@@ -63,16 +63,25 @@ video-translate/
 
 **macOS:**
 ```bash
+# 基础安装（适用于软字幕）
 brew install ffmpeg
+
+# 如需使用硬字幕（--hard-sub），需要安装带 libass 支持的 FFmpeg：
+brew install ffmpeg-full
+echo 'export PATH="/opt/homebrew/opt/ffmpeg-full/bin:$PATH"' >> ~/.zshrc
+source ~/.zshrc
 ```
+
+> **注意**: 标准的 `brew install ffmpeg` 不包含 libass 支持，而 `--hard-sub` 功能需要 libass。如果遇到 "No option name near force_style" 错误，请改用 `ffmpeg-full`。
 
 **Ubuntu/Debian:**
 ```bash
 sudo apt update && sudo apt install ffmpeg
 ```
+> apt 安装的版本通常已包含 libass 支持。如果使用 `--hard-sub` 时遇到 "No option name near force_style" 错误，请安装 libass：`sudo apt install libass-dev` 并重新安装 ffmpeg。
 
 **Windows:**
-下载并安装 [FFmpeg](https://ffmpeg.org/download.html)
+下载并安装 [FFmpeg](https://ffmpeg.org/download.html)（推荐：[gyan.dev](https://www.gyan.dev/ffmpeg/builds/) 完整版或 [BtbN](https://github.com/BtbN/FFmpeg-Builds/releases) 构建版，这些版本包含 libass 支持）
 
 ### 快速安装（推荐）
 

@@ -9,6 +9,7 @@ from pathlib import Path
 from . import __version__
 from .config import (
     Config,
+    HardwareAccel,
     Language,
     SubtitleConfig,
     SummaryConfig,
@@ -128,6 +129,21 @@ def create_parser() -> argparse.ArgumentParser:
 
     parser.add_argument("--font-size", type=int, default=24, help="硬字幕字体大小 (默认: 24)")
 
+    parser.add_argument(
+        "--hw-accel",
+        default="auto",
+        choices=["auto", "none", "videotoolbox", "nvenc", "qsv", "amf"],
+        help="硬字幕编码硬件加速 (默认: auto 自动检测)",
+    )
+
+    parser.add_argument(
+        "--video-quality",
+        type=int,
+        default=23,
+        metavar="CRF",
+        help="硬字幕视频质量 (0-51，越小质量越高，默认: 23)",
+    )
+
     # 总结选项
     parser.add_argument("--no-summary", action="store_true", help="禁用视频内容总结功能")
 
@@ -233,6 +249,8 @@ def build_config(args: argparse.Namespace) -> Config:
             embed_subtitle=not args.no_embed,
             soft_subtitle=not args.hard_sub,
             font_size=args.font_size,
+            hardware_accel=HardwareAccel(args.hw_accel),
+            video_quality=args.video_quality,
         ),
         summary=SummaryConfig(
             enabled=not args.no_summary,
@@ -246,7 +264,7 @@ def build_config(args: argparse.Namespace) -> Config:
     return config
 
 
-def main(argv: list[str] = None):
+def main(argv: list[str] | None = None):
     """命令行入口函数"""
     from .utils import progress
 

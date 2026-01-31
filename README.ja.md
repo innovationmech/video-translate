@@ -63,16 +63,25 @@ video-translate/
 
 **macOS:**
 ```bash
+# 基本インストール（ソフト字幕に十分）
 brew install ffmpeg
+
+# ハード字幕（--hard-sub）を使用する場合、libassサポート付きのFFmpegが必要：
+brew install ffmpeg-full
+echo 'export PATH="/opt/homebrew/opt/ffmpeg-full/bin:$PATH"' >> ~/.zshrc
+source ~/.zshrc
 ```
+
+> **注意**: 標準の `brew install ffmpeg` にはlibassサポートが含まれておらず、`--hard-sub` 機能にはlibassが必要です。「No option name near force_style」エラーが発生した場合は、`ffmpeg-full` をインストールしてください。
 
 **Ubuntu/Debian:**
 ```bash
 sudo apt update && sudo apt install ffmpeg
 ```
+> aptパッケージには通常libassサポートが含まれています。`--hard-sub` で「No option name near force_style」エラーが発生した場合は、libassをインストールしてください：`sudo apt install libass-dev` を実行し、ffmpegを再インストールしてください。
 
 **Windows:**
-[FFmpeg](https://ffmpeg.org/download.html) をダウンロードしてインストール
+[FFmpeg](https://ffmpeg.org/download.html) をダウンロードしてインストール（推奨：[gyan.dev](https://www.gyan.dev/ffmpeg/builds/) のフルビルドまたは [BtbN](https://github.com/BtbN/FFmpeg-Builds/releases) のビルド、これらにはlibassサポートが含まれています）
 
 ### クイックインストール（推奨）
 

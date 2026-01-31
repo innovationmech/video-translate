@@ -63,16 +63,25 @@ FFmpeg is required for video processing. Please install it first:
 
 **macOS:**
 ```bash
+# Basic installation (sufficient for soft subtitles)
 brew install ffmpeg
+
+# For hard subtitles (--hard-sub), you need FFmpeg with libass support:
+brew install ffmpeg-full
+echo 'export PATH="/opt/homebrew/opt/ffmpeg-full/bin:$PATH"' >> ~/.zshrc
+source ~/.zshrc
 ```
+
+> **Note**: The standard `brew install ffmpeg` does not include libass support, which is required for the `--hard-sub` feature. If you encounter errors like "No option name near force_style", please install `ffmpeg-full` instead.
 
 **Ubuntu/Debian:**
 ```bash
 sudo apt update && sudo apt install ffmpeg
 ```
+> The apt package typically includes libass support. If you encounter "No option name near force_style" errors with `--hard-sub`, install libass: `sudo apt install libass-dev` and reinstall ffmpeg.
 
 **Windows:**
-Download and install [FFmpeg](https://ffmpeg.org/download.html)
+Download and install [FFmpeg](https://ffmpeg.org/download.html) (recommended: [gyan.dev](https://www.gyan.dev/ffmpeg/builds/) full build or [BtbN](https://github.com/BtbN/FFmpeg-Builds/releases) builds, which include libass support)
 
 ### Quick Installation (Recommended)
 
