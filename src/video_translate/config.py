@@ -28,6 +28,17 @@ class WhisperModel(Enum):
     LARGE = "large"
 
 
+class HardwareAccel(Enum):
+    """硬件加速类型"""
+
+    AUTO = "auto"  # 自动检测最佳方案
+    NONE = "none"  # 禁用硬件加速，使用 CPU
+    VIDEOTOOLBOX = "videotoolbox"  # macOS VideoToolbox
+    NVENC = "nvenc"  # NVIDIA NVENC
+    QSV = "qsv"  # Intel Quick Sync Video
+    AMF = "amf"  # AMD AMF
+
+
 class Language(Enum):
     """支持的语言"""
 
@@ -160,6 +171,8 @@ class VideoConfig:
     soft_subtitle: bool = True  # 软字幕（vs 硬字幕）
     font_name: str = "PingFang SC"
     font_size: int = 24
+    hardware_accel: HardwareAccel = HardwareAccel.AUTO  # 硬件加速（硬字幕编码时使用）
+    video_quality: int = 23  # 视频质量 (CRF/CQ 值，越小质量越高，范围 0-51)
 
 
 @dataclass

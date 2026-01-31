@@ -145,6 +145,13 @@ FP16 precision is only enabled on CUDA devices. This is handled in `transcriber.
 - `torch`: Required by Whisper for model inference
 - FFmpeg (system dependency): Required for video/audio processing and subtitle embedding
 
+**FFmpeg Installation Notes:**
+- Hard subtitles (`--hard-sub`) require FFmpeg compiled with libass support
+- Error "No option name near force_style" indicates missing libass support
+- **macOS**: Standard `brew install ffmpeg` lacks libass; use `brew install ffmpeg-full` and add to PATH
+- **Linux**: `apt install ffmpeg` usually includes libass; if not, install `libass-dev`
+- **Windows**: Download full builds from gyan.dev or BtbN (include libass by default)
+
 **Dev Dependencies:**
 - `pytest`, `pytest-cov`: Testing framework
 - `black`: Code formatter (line length 100)

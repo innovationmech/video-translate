@@ -151,7 +151,7 @@ class TestEmbedSubtitle:
 
         mock_run_ffmpeg.assert_called_once()
         call_args = mock_run_ffmpeg.call_args[0][0]
-        assert "-vf" in call_args  # 硬字幕使用视频滤镜
+        assert "-filter_script:v" in call_args  # 硬字幕使用 filter_script
 
     def test_embed_video_not_found(self, temp_dir):
         """测试视频文件不存在"""
@@ -209,7 +209,7 @@ class TestEmbedSubtitle:
         )
 
         call_args = mock_run_ffmpeg.call_args[0][0]
-        assert "-vf" in call_args  # 应该使用硬字幕
+        assert "-filter_script:v" in call_args  # 应该使用硬字幕 (filter_script)
 
 
 class TestRunFFmpeg:

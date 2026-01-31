@@ -4,10 +4,51 @@
 
 import os
 import subprocess
+import sys
+from collections.abc import Callable
 from pathlib import Path
+from typing import TypedDict
 
-from .config import VideoConfig
+from .config import HardwareAccel, VideoConfig
 from .utils import progress
+
+
+class EncoderConfig(TypedDict):
+    """硬件编码器配置"""
+
+    h264: str
+    hevc: str
+    quality_param: str
+    quality_scale: Callable[[int], int]
+
+
+# 硬件编码器配置映射
+HARDWARE_ENCODERS: dict[HardwareAccel, EncoderConfig] = {
+    HardwareAccel.VIDEOTOOLBOX: {
+        "h264": "h264_videotoolbox",
+        "hevc": "hevc_videotoolbox",
+        "quality_param": "-q:v",  # VideoToolbox 使用 -q:v (1-100, 越高质量越好)
+        "quality_scale": lambda crf: max(1, min(100, 100 - crf * 2)),  # CRF 转换
+    },
+    HardwareAccel.NVENC: {
+        "h264": "h264_nvenc",
+        "hevc": "hevc_nvenc",
+        "quality_param": "-cq",  # NVENC 使用 CQ (Constant Quality)
+        "quality_scale": lambda crf: crf,  # 直接使用 CRF 值
+    },
+    HardwareAccel.QSV: {
+        "h264": "h264_qsv",
+        "hevc": "hevc_qsv",
+        "quality_param": "-global_quality",
+        "quality_scale": lambda crf: crf,
+    },
+    HardwareAccel.AMF: {
+        "h264": "h264_amf",
+        "hevc": "hevc_amf",
+        "quality_param": "-qp_i",  # AMF 使用 QP
+        "quality_scale": lambda crf: crf,
+    },
+}
 
 
 def get_ffmpeg_path() -> str:
@@ -54,6 +95,69 @@ class VideoProcessor:
             return result.returncode == 0
         except FileNotFoundError:
             return False
+
+    @staticmethod
+    def check_encoder(encoder: str) -> bool:
+        """检查指定编码器是否可用"""
+        try:
+            ffmpeg = get_ffmpeg_path()
+            result = subprocess.run(
+                [ffmpeg, "-hide_banner", "-encoders"],
+                capture_output=True,
+                text=True,
+            )
+            return encoder in result.stdout
+        except (FileNotFoundError, subprocess.CalledProcessError):
+            return False
+
+    @staticmethod
+    def detect_hardware_accel() -> HardwareAccel:
+        """自动检测可用的硬件加速方案"""
+        # 按优先级检测
+        if sys.platform == "darwin":
+            # macOS 优先使用 VideoToolbox
+            if VideoProcessor.check_encoder("h264_videotoolbox"):
+                progress.info("检测到 VideoToolbox 硬件加速")
+                return HardwareAccel.VIDEOTOOLBOX
+        else:
+            # Linux/Windows 检测顺序: NVENC > QSV > AMF
+            if VideoProcessor.check_encoder("h264_nvenc"):
+                progress.info("检测到 NVIDIA NVENC 硬件加速")
+                return HardwareAccel.NVENC
+            if VideoProcessor.check_encoder("h264_qsv"):
+                progress.info("检测到 Intel QSV 硬件加速")
+                return HardwareAccel.QSV
+            if VideoProcessor.check_encoder("h264_amf"):
+                progress.info("检测到 AMD AMF 硬件加速")
+                return HardwareAccel.AMF
+
+        progress.info("未检测到硬件加速，将使用 CPU 编码")
+        return HardwareAccel.NONE
+
+    def get_encoder_settings(self, accel: HardwareAccel) -> dict | None:
+        """获取硬件编码器设置"""
+        if accel == HardwareAccel.AUTO:
+            accel = self.detect_hardware_accel()
+
+        if accel == HardwareAccel.NONE:
+            return None
+
+        if accel not in HARDWARE_ENCODERS:
+            return None
+
+        encoder_config = HARDWARE_ENCODERS[accel]
+        encoder = encoder_config["h264"]
+
+        # 验证编码器是否真正可用
+        if not self.check_encoder(encoder):
+            progress.warning(f"编码器 {encoder} 不可用，回退到 CPU 编码")
+            return None
+
+        return {
+            "encoder": encoder,
+            "quality_param": encoder_config["quality_param"],
+            "quality_value": encoder_config["quality_scale"](self.config.video_quality),
+        }
 
     def get_subtitle_codec(self, output_path: str | Path) -> str:
         """根据输出格式获取字幕编码"""
@@ -138,30 +242,56 @@ class VideoProcessor:
             temp_srt = Path(temp_dir) / "subtitle.srt"
             shutil.copy(subtitle_path, temp_srt)
 
-            # 转义临时路径中可能的特殊字符
-            srt_escaped = str(temp_srt).replace("\\", "/").replace(":", "\\:")
-
-            # 字体样式 - 注意 FontName 不要有空格问题
-            font_name = self.config.font_name.replace(" ", "\\ ")
+            # 字体样式 - ASS override tags 格式
             font_style = (
                 f"FontSize={self.config.font_size},"
-                f"FontName={font_name},"
+                f"FontName={self.config.font_name},"
                 "PrimaryColour=&HFFFFFF,"
                 "OutlineColour=&H000000,"
                 "Outline=2"
             )
+
+            # 获取硬件编码器设置
+            encoder_settings = self.get_encoder_settings(self.config.hardware_accel)
+
+            # 创建 filtergraph 脚本文件，避免命令行转义问题
+            # FFmpeg 8.0+ 对命令行转义非常严格，使用 filter_script 更可靠
+            filter_script = Path(temp_dir) / "filter.txt"
+
+            # 在 filter script 中，路径需要转义特殊字符（冒号、反斜杠、单引号）
+            # 注意：文件路径参数不应该用引号包裹，否则会导致解析错误
+            srt_path_escaped = (
+                str(temp_srt).replace("\\", "/").replace(":", "\\:").replace("'", "\\'")
+            )
+
+            # 写入 filtergraph 脚本
+            # subtitles 的文件路径不需要引号，只有 force_style 的值需要引号
+            filter_content = f"subtitles={srt_path_escaped}:force_style='{font_style}'"
+            filter_script.write_text(filter_content)
 
             cmd = [
                 get_ffmpeg_path(),
                 "-y",
                 "-i",
                 str(video_path),
-                "-vf",
-                f"subtitles={srt_escaped}:force_style='{font_style}'",
-                "-c:a",
-                "copy",
-                str(output_path),
+                "-filter_script:v",
+                str(filter_script),
             ]
+
+            # 添加编码器参数
+            if encoder_settings:
+                progress.info(f"使用硬件编码器: {encoder_settings['encoder']}")
+                cmd.extend(["-c:v", encoder_settings["encoder"]])
+                # 添加质量参数
+                cmd.extend(
+                    [encoder_settings["quality_param"], str(encoder_settings["quality_value"])]
+                )
+            else:
+                # CPU 编码 (libx264)
+                progress.info("使用 CPU 编码器: libx264")
+                cmd.extend(["-c:v", "libx264", "-crf", str(self.config.video_quality)])
+
+            cmd.extend(["-c:a", "copy", str(output_path)])
 
             self._run_ffmpeg(cmd)
 
@@ -173,7 +303,7 @@ class VideoProcessor:
             progress.error(f"FFmpeg 错误: {e.stderr}")
             raise RuntimeError(f"FFmpeg 处理失败: {e.stderr}") from e
 
-    def get_video_info(self, video_path: str | Path) -> dict:
+    def get_video_info(self, video_path: str | Path) -> dict[str, object]:
         """获取视频信息"""
         video_path = Path(video_path)
 
@@ -192,6 +322,7 @@ class VideoProcessor:
             result = subprocess.run(cmd, capture_output=True, text=True, check=True)
             import json
 
-            return json.loads(result.stdout)
+            info: dict[str, object] = json.loads(result.stdout)
+            return info
         except (subprocess.CalledProcessError, FileNotFoundError):
             return {}
