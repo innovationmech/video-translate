@@ -261,10 +261,7 @@ class VideoProcessor:
             # 在 filter script 中，路径需要转义特殊字符（冒号、反斜杠、单引号）
             # 注意：文件路径参数不应该用引号包裹，否则会导致解析错误
             srt_path_escaped = (
-                str(temp_srt)
-                .replace("\\", "/")
-                .replace(":", "\\:")
-                .replace("'", "\\'")
+                str(temp_srt).replace("\\", "/").replace(":", "\\:").replace("'", "\\'")
             )
 
             # 写入 filtergraph 脚本
