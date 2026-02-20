@@ -2,7 +2,7 @@
 
 動画の音声を自動的に認識し、ターゲット言語に翻訳して、字幕ファイルの生成または動画への埋め込みを行います。**18言語間の翻訳をサポート**。
 
-[English](README.md) | [中文文档](README.zh.md) | [한국어 문서](README.ko.md)
+[English](README.md) | [中文文档](README.zh.md) | [한국어 문서](README.ko.md) | [Français](README.fr.md) | [Deutsch](README.de.md)
 
 ## ✨ 機能
 
@@ -12,6 +12,9 @@
 - 📄 **字幕生成**: SRT、VTT、ASSなど複数の字幕フォーマットをサポート
 - 🎥 **字幕埋め込み**: ソフト字幕とハード字幕の両方に対応
 - 🌍 **バイリンガル字幕**: バイリンガル字幕の生成オプション
+- 📝 **ビデオ要約**: LLMベースのビデオ内容要約（キーポイント、トピック、タイムラインを含む）
+- ⚡ **ハードウェアアクセラレーション**: ハードウェアエンコーディング自動検出（VideoToolbox/NVENC/QSV/AMF）でハード字幕レンダリングを高速化
+- 🖥️ **GUI統合**: JSON形式の進行状況出力でGUIとのシームレスな統合をサポート
 - 💰 **コストパフォーマンス**: DeepSeek APIは手頃な価格で優れた翻訳品質
 - 🏗️ **モジュール設計**: 拡張とメンテナンスが容易
 
@@ -44,6 +47,7 @@ video-translate/
 │       ├── models.py        # データモデル
 │       ├── transcriber.py   # 音声認識モジュール
 │       ├── translator.py    # 翻訳モジュール
+│       ├── summarizer.py    # ビデオ内容要約モジュール
 │       ├── subtitle.py      # 字幕処理モジュール
 │       ├── video.py         # ビデオ処理モジュール
 │       ├── pipeline.py      # 処理パイプライン
@@ -101,7 +105,7 @@ uv pip install video-translate
 
 ```bash
 # 1. プロジェクトをクローン
-git clone https://github.com/yourusername/video-translate.git
+git clone https://github.com/innovationmech/video-translate.git
 cd video-translate
 
 # 2. uvをインストール（未インストールの場合）
@@ -166,6 +170,8 @@ video-translate video.mp4 --source fr --target de
 
 ### コマンドラインオプション
 
+**基本オプション：**
+
 | オプション | 説明 |
 |-----------|------|
 | `-s, --source` | ソース言語コード（デフォルト: en） |
@@ -173,13 +179,49 @@ video-translate video.mp4 --source fr --target de
 | `--list-languages` | サポートされているすべての言語をリスト |
 | `-o, --output` | 出力ディレクトリを指定 |
 | `-m, --model` | Whisperモデルサイズ（tiny/base/small/medium/large） |
+| `-v, --version` | バージョンを表示 |
+| `--verbose` | 詳細ログを表示 |
+
+**翻訳オプション：**
+
+| オプション | 説明 |
+|-----------|------|
 | `--translator` | 翻訳エンジン（deepseek/openai） |
 | `--api-key` | 翻訳APIキー |
+| `--api-base` | API Base URL（オプション、カスタムエンドポイント用） |
+| `--llm-model` | LLMモデル名（オプション、デフォルトモデルを上書き） |
+
+**字幕オプション：**
+
+| オプション | 説明 |
+|-----------|------|
 | `--target-only` | ターゲット言語の字幕のみ出力、ソーステキストなし |
 | `--source-first` | ソース言語を上に、ターゲット言語を下に |
+
+**ビデオオプション：**
+
+| オプション | 説明 |
+|-----------|------|
 | `--no-embed` | 字幕を動画に埋め込まず、字幕ファイルのみ生成 |
 | `--hard-sub` | ハード字幕を使用（動画に焼き付け） |
 | `--font-size` | ハード字幕のフォントサイズ（デフォルト: 24） |
+| `--hw-accel` | ハード字幕エンコーディングのハードウェアアクセラレーション（auto/none/videotoolbox/nvenc/qsv/amf、デフォルト: auto） |
+| `--video-quality` | ハード字幕のビデオ品質、CRF値（0-51、小さいほど高品質、デフォルト: 23） |
+
+**要約オプション：**
+
+| オプション | 説明 |
+|-----------|------|
+| `--no-summary` | ビデオ内容要約を無効化 |
+| `--summary-lang` | 要約言語コード（デフォルト: ターゲット言語に従う） |
+| `--max-key-points` | 要約のキーポイント最大数（デフォルト: 5） |
+| `--no-timeline` | 要約からタイムラインを除外 |
+
+**詳細オプション：**
+
+| オプション | 説明 |
+|-----------|------|
+| `--json-progress` | JSON形式の進行状況を出力（GUI統合用） |
 
 ### その他の例
 
@@ -193,14 +235,29 @@ video-translate video.mp4 --no-embed
 # ハード字幕を生成（動画に焼き付け）
 video-translate video.mp4 --hard-sub
 
+# NVIDIAハードウェアアクセラレーションで高品質ハード字幕
+video-translate video.mp4 --hard-sub --hw-accel nvenc --video-quality 18
+
 # ターゲット言語の字幕のみ出力
 video-translate video.mp4 --target-only
 
 # OpenAI翻訳を使用
 video-translate video.mp4 --translator openai
 
+# カスタムAPIエンドポイントとモデルを使用
+video-translate video.mp4 --api-base https://your-api.com/v1 --llm-model your-model
+
+# ビデオ内容要約を無効化
+video-translate video.mp4 --no-summary
+
+# 英語で要約を生成、最大10個のキーポイント
+video-translate video.mp4 --summary-lang en --max-key-points 10
+
 # 出力ディレクトリを指定
 video-translate video.mp4 -o ./output
+
+# JSON形式の進行状況出力（GUI統合用）
+video-translate video.mp4 --json-progress
 ```
 
 ### ライブラリとして使用
@@ -215,6 +272,7 @@ from video_translate import (
     TranslatorType,
     Language,
 )
+from video_translate.config import SummaryConfig, VideoConfig, HardwareAccel
 
 # 設定を作成 - 日本語から中国語への翻訳
 config = Config(
@@ -228,6 +286,16 @@ config = Config(
         source_language=Language.JAPANESE,
         target_language=Language.CHINESE,
     ),
+    video=VideoConfig(
+        embed_subtitle=True,
+        soft_subtitle=False,  # ハード字幕を使用
+        hardware_accel=HardwareAccel.AUTO,
+    ),
+    summary=SummaryConfig(
+        enabled=True,
+        max_key_points=5,
+        include_timeline=True,
+    ),
 )
 
 # 処理パイプラインを作成
@@ -238,6 +306,15 @@ result = pipeline.process("video.mp4")
 
 print(f"字幕ファイル: {result['subtitle_file']}")
 print(f"出力ビデオ: {result['output_video']}")
+print(f"要約ファイル: {result['summary_file']}")
+
+# 要約データにアクセス
+if result['summary']:
+    summary = result['summary']
+    print(f"タイトル: {summary.title}")
+    print(f"概要: {summary.overview}")
+    for point in summary.key_points:
+        print(f"  - {point}")
 ```
 
 ## 🤖 Whisperモデルの選択
@@ -279,15 +356,17 @@ class MyTranslator(BaseTranslator):
 ## 📁 出力ファイル
 
 - `videoname_{language_code}.srt` - 字幕ファイル（例：`video_zh.srt`、`video_ja.srt`）
+- `videoname_{language_code}_summary.json` - ビデオ内容要約JSONファイル（タイトル、概要、キーポイント、トピック、タイムライン）
 - `videoname_{language_code}.mp4` - 字幕が埋め込まれた動画（埋め込みを選択した場合）
 
 ## ⚠️ 注意事項
 
 1. **初回実行**時にWhisperモデルが自動的にダウンロードされます。安定したインターネット接続を確保してください
-2. **ハード字幕**は動画を再エンコードするため、時間がかかります
+2. **ハード字幕**は動画を再エンコードするため、時間がかかります。`--hw-accel` でハードウェアアクセラレーションを有効にしてエンコーディングを高速化できます
 3. **ソフト字幕**はストリームをコピーするだけなので高速ですが、一部のプレーヤーではサポートされていない場合があります
 4. システムにFFmpegがインストールされていることを確認してください
-5. Apple Silicon Macは自動的にMPSアクセラレーションを使用します
+5. Apple Silicon Macは自動的にWhisperにMPSアクセラレーション、ビデオエンコーディングにVideoToolboxを使用します
+6. **ビデオ要約**はデフォルトで有効であり、翻訳と同じLLM APIを使用します。`--no-summary` で無効化できます
 
 ## 🛠️ 開発
 
