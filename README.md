@@ -2,7 +2,7 @@
 
 Automatically transcribe video audio, translate to target language, and generate subtitle files or embed them into videos. **Supports translation between 18 languages**.
 
-[中文文档](README.zh.md) | [日本語ドキュメント](README.ja.md) | [한국어 문서](README.ko.md)
+[中文文档](README.zh.md) | [日本語ドキュメント](README.ja.md) | [한국어 문서](README.ko.md) | [Français](README.fr.md) | [Deutsch](README.de.md)
 
 ## ✨ Features
 
@@ -12,6 +12,9 @@ Automatically transcribe video audio, translate to target language, and generate
 - 📄 **Subtitle Generation**: Supports multiple subtitle formats including SRT, VTT, ASS
 - 🎥 **Subtitle Embedding**: Supports both soft and hard subtitle methods
 - 🌍 **Bilingual Subtitles**: Optional bilingual subtitle generation
+- 📝 **Video Summary**: LLM-powered video content summarization with key points, topics, and timeline
+- ⚡ **Hardware Acceleration**: Auto-detect hardware encoding (VideoToolbox/NVENC/QSV/AMF) for faster hard subtitle rendering
+- 🖥️ **GUI Integration**: JSON progress output for seamless integration with graphical interfaces
 - 💰 **Cost-Effective**: DeepSeek API offers affordable pricing with excellent translation quality
 - 🏗️ **Modular Design**: Easy to extend and maintain
 
@@ -44,6 +47,7 @@ video-translate/
 │       ├── models.py        # Data models
 │       ├── transcriber.py   # Speech recognition module
 │       ├── translator.py    # Translation module
+│       ├── summarizer.py    # Video content summarization module
 │       ├── subtitle.py      # Subtitle processing module
 │       ├── video.py         # Video processing module
 │       ├── pipeline.py      # Processing pipeline
@@ -101,7 +105,7 @@ If you want to contribute to development or modify the code:
 
 ```bash
 # 1. Clone the project
-git clone https://github.com/yourusername/video-translate.git
+git clone https://github.com/innovationmech/video-translate.git
 cd video-translate
 
 # 2. Install uv (if not already installed)
@@ -166,6 +170,8 @@ video-translate video.mp4 --source fr --target de
 
 ### Command Line Options
 
+**Basic Options:**
+
 | Option | Description |
 |--------|-------------|
 | `-s, --source` | Source language code (default: en) |
@@ -173,13 +179,49 @@ video-translate video.mp4 --source fr --target de
 | `--list-languages` | List all supported languages |
 | `-o, --output` | Specify output directory |
 | `-m, --model` | Whisper model size (tiny/base/small/medium/large) |
+| `-v, --version` | Show version |
+| `--verbose` | Show detailed logs |
+
+**Translation Options:**
+
+| Option | Description |
+|--------|-------------|
 | `--translator` | Translation engine (deepseek/openai) |
 | `--api-key` | Translation API Key |
+| `--api-base` | API Base URL (optional, for custom endpoints) |
+| `--llm-model` | LLM model name (optional, override default model) |
+
+**Subtitle Options:**
+
+| Option | Description |
+|--------|-------------|
 | `--target-only` | Output only target language subtitles, without source text |
 | `--source-first` | Source language on top, target language below |
+
+**Video Options:**
+
+| Option | Description |
+|--------|-------------|
 | `--no-embed` | Don't embed subtitles into video, only generate subtitle files |
 | `--hard-sub` | Use hard subtitles (burned into video) |
 | `--font-size` | Hard subtitle font size (default: 24) |
+| `--hw-accel` | Hardware acceleration for hard subtitle encoding (auto/none/videotoolbox/nvenc/qsv/amf, default: auto) |
+| `--video-quality` | Hard subtitle video quality, CRF value (0-51, lower is better, default: 23) |
+
+**Summary Options:**
+
+| Option | Description |
+|--------|-------------|
+| `--no-summary` | Disable video content summary |
+| `--summary-lang` | Summary language code (default: follows target language) |
+| `--max-key-points` | Max number of key points in summary (default: 5) |
+| `--no-timeline` | Exclude timeline from summary |
+
+**Advanced Options:**
+
+| Option | Description |
+|--------|-------------|
+| `--json-progress` | Output JSON-formatted progress (for GUI integration) |
 
 ### More Examples
 
@@ -193,14 +235,29 @@ video-translate video.mp4 --no-embed
 # Generate hard subtitles (burned into video)
 video-translate video.mp4 --hard-sub
 
+# Hard subtitles with NVIDIA hardware acceleration and high quality
+video-translate video.mp4 --hard-sub --hw-accel nvenc --video-quality 18
+
 # Output only target language subtitles
 video-translate video.mp4 --target-only
 
 # Use OpenAI translation
 video-translate video.mp4 --translator openai
 
+# Use a custom API endpoint and model
+video-translate video.mp4 --api-base https://your-api.com/v1 --llm-model your-model
+
+# Disable video content summary
+video-translate video.mp4 --no-summary
+
+# Generate summary in English with up to 10 key points
+video-translate video.mp4 --summary-lang en --max-key-points 10
+
 # Specify output directory
 video-translate video.mp4 -o ./output
+
+# JSON progress output for GUI integration
+video-translate video.mp4 --json-progress
 ```
 
 ### Use as a Library
@@ -215,6 +272,7 @@ from video_translate import (
     TranslatorType,
     Language,
 )
+from video_translate.config import SummaryConfig, VideoConfig, HardwareAccel
 
 # Create configuration - Japanese to Chinese translation
 config = Config(
@@ -228,6 +286,16 @@ config = Config(
         source_language=Language.JAPANESE,
         target_language=Language.CHINESE,
     ),
+    video=VideoConfig(
+        embed_subtitle=True,
+        soft_subtitle=False,  # Use hard subtitles
+        hardware_accel=HardwareAccel.AUTO,
+    ),
+    summary=SummaryConfig(
+        enabled=True,
+        max_key_points=5,
+        include_timeline=True,
+    ),
 )
 
 # Create processing pipeline
@@ -238,6 +306,15 @@ result = pipeline.process("video.mp4")
 
 print(f"Subtitle file: {result['subtitle_file']}")
 print(f"Output video: {result['output_video']}")
+print(f"Summary file: {result['summary_file']}")
+
+# Access summary data
+if result['summary']:
+    summary = result['summary']
+    print(f"Title: {summary.title}")
+    print(f"Overview: {summary.overview}")
+    for point in summary.key_points:
+        print(f"  - {point}")
 ```
 
 ## 🤖 Whisper Model Selection
@@ -279,15 +356,17 @@ class MyTranslator(BaseTranslator):
 ## 📁 Output Files
 
 - `videoname_{language_code}.srt` - Subtitle file (e.g., `video_zh.srt`, `video_ja.srt`)
+- `videoname_{language_code}_summary.json` - Video content summary in JSON format (title, overview, key points, topics, timeline)
 - `videoname_{language_code}.mp4` - Video with embedded subtitles (if embedding is selected)
 
 ## ⚠️ Notes
 
 1. **First run** will automatically download the Whisper model, please ensure a stable internet connection
-2. **Hard subtitles** will re-encode the video, which takes longer
+2. **Hard subtitles** will re-encode the video, which takes longer; use `--hw-accel` to enable hardware acceleration for faster encoding
 3. **Soft subtitles** only copy streams, faster but may not be supported by some players
 4. Ensure FFmpeg is installed on your system
-5. Apple Silicon Macs will automatically use MPS acceleration
+5. Apple Silicon Macs will automatically use MPS acceleration for Whisper and VideoToolbox for video encoding
+6. **Video summary** is enabled by default and uses the same LLM API as translation; use `--no-summary` to disable
 
 ## 🛠️ Development
 

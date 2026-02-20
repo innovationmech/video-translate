@@ -2,7 +2,7 @@
 
 동영상 음성을 자동으로 인식하여 대상 언어로 번역하고 자막 파일을 생성하거나 비디오에 임베드합니다. **18개 언어 간 번역 지원**.
 
-[English](README.md) | [中文文档](README.zh.md) | [日本語ドキュメント](README.ja.md)
+[English](README.md) | [中文文档](README.zh.md) | [日本語ドキュメント](README.ja.md) | [Français](README.fr.md) | [Deutsch](README.de.md)
 
 ## ✨ 기능
 
@@ -12,6 +12,9 @@
 - 📄 **자막 생성**: SRT, VTT, ASS 등 다양한 자막 형식 지원
 - 🎥 **자막 임베딩**: 소프트 자막 및 하드 자막 모두 지원
 - 🌍 **이중 언어 자막**: 이중 언어 자막 생성 옵션
+- 📝 **비디오 요약**: LLM 기반 비디오 콘텐츠 요약 (핵심 포인트, 주제, 타임라인 포함)
+- ⚡ **하드웨어 가속**: 하드웨어 인코딩 자동 감지 (VideoToolbox/NVENC/QSV/AMF)로 하드 자막 렌더링 속도 향상
+- 🖥️ **GUI 통합**: JSON 형식 진행 상황 출력으로 GUI와 원활한 통합 지원
 - 💰 **비용 효율적**: DeepSeek API는 저렴한 가격에 우수한 번역 품질 제공
 - 🏗️ **모듈식 설계**: 쉬운 확장 및 유지보수
 
@@ -44,6 +47,7 @@ video-translate/
 │       ├── models.py        # 데이터 모델
 │       ├── transcriber.py   # 음성 인식 모듈
 │       ├── translator.py    # 번역 모듈
+│       ├── summarizer.py    # 비디오 콘텐츠 요약 모듈
 │       ├── subtitle.py      # 자막 처리 모듈
 │       ├── video.py         # 비디오 처리 모듈
 │       ├── pipeline.py      # 처리 파이프라인
@@ -101,7 +105,7 @@ uv pip install video-translate
 
 ```bash
 # 1. 프로젝트 클론
-git clone https://github.com/yourusername/video-translate.git
+git clone https://github.com/innovationmech/video-translate.git
 cd video-translate
 
 # 2. uv 설치 (미설치된 경우)
@@ -166,6 +170,8 @@ video-translate video.mp4 --source fr --target de
 
 ### 커맨드라인 옵션
 
+**기본 옵션:**
+
 | 옵션 | 설명 |
 |------|------|
 | `-s, --source` | 소스 언어 코드 (기본값: en) |
@@ -173,13 +179,49 @@ video-translate video.mp4 --source fr --target de
 | `--list-languages` | 지원되는 모든 언어 나열 |
 | `-o, --output` | 출력 디렉토리 지정 |
 | `-m, --model` | Whisper 모델 크기 (tiny/base/small/medium/large) |
+| `-v, --version` | 버전 표시 |
+| `--verbose` | 상세 로그 표시 |
+
+**번역 옵션:**
+
+| 옵션 | 설명 |
+|------|------|
 | `--translator` | 번역 엔진 (deepseek/openai) |
 | `--api-key` | 번역 API 키 |
+| `--api-base` | API Base URL (선택 사항, 사용자 정의 엔드포인트용) |
+| `--llm-model` | LLM 모델 이름 (선택 사항, 기본 모델 재정의) |
+
+**자막 옵션:**
+
+| 옵션 | 설명 |
+|------|------|
 | `--target-only` | 대상 언어 자막만 출력, 소스 텍스트 제외 |
 | `--source-first` | 소스 언어를 위에, 대상 언어를 아래에 |
+
+**비디오 옵션:**
+
+| 옵션 | 설명 |
+|------|------|
 | `--no-embed` | 자막을 비디오에 임베드하지 않고 자막 파일만 생성 |
 | `--hard-sub` | 하드 자막 사용 (비디오에 구워넣기) |
 | `--font-size` | 하드 자막 폰트 크기 (기본값: 24) |
+| `--hw-accel` | 하드 자막 인코딩 하드웨어 가속 (auto/none/videotoolbox/nvenc/qsv/amf, 기본값: auto) |
+| `--video-quality` | 하드 자막 비디오 품질, CRF 값 (0-51, 낮을수록 고품질, 기본값: 23) |
+
+**요약 옵션:**
+
+| 옵션 | 설명 |
+|------|------|
+| `--no-summary` | 비디오 콘텐츠 요약 비활성화 |
+| `--summary-lang` | 요약 언어 코드 (기본값: 대상 언어를 따름) |
+| `--max-key-points` | 요약의 최대 핵심 포인트 수 (기본값: 5) |
+| `--no-timeline` | 요약에서 타임라인 제외 |
+
+**고급 옵션:**
+
+| 옵션 | 설명 |
+|------|------|
+| `--json-progress` | JSON 형식 진행 상황 출력 (GUI 통합용) |
 
 ### 추가 예제
 
@@ -193,14 +235,29 @@ video-translate video.mp4 --no-embed
 # 하드 자막 생성 (비디오에 구워넣기)
 video-translate video.mp4 --hard-sub
 
+# NVIDIA 하드웨어 가속으로 고품질 하드 자막
+video-translate video.mp4 --hard-sub --hw-accel nvenc --video-quality 18
+
 # 대상 언어 자막만 출력
 video-translate video.mp4 --target-only
 
 # OpenAI 번역 사용
 video-translate video.mp4 --translator openai
 
+# 사용자 정의 API 엔드포인트 및 모델 사용
+video-translate video.mp4 --api-base https://your-api.com/v1 --llm-model your-model
+
+# 비디오 콘텐츠 요약 비활성화
+video-translate video.mp4 --no-summary
+
+# 영어로 요약 생성, 최대 10개 핵심 포인트
+video-translate video.mp4 --summary-lang en --max-key-points 10
+
 # 출력 디렉토리 지정
 video-translate video.mp4 -o ./output
+
+# JSON 형식 진행 상황 출력 (GUI 통합용)
+video-translate video.mp4 --json-progress
 ```
 
 ### 라이브러리로 사용
@@ -215,6 +272,7 @@ from video_translate import (
     TranslatorType,
     Language,
 )
+from video_translate.config import SummaryConfig, VideoConfig, HardwareAccel
 
 # 설정 생성 - 일본어에서 중국어로 번역
 config = Config(
@@ -228,6 +286,16 @@ config = Config(
         source_language=Language.JAPANESE,
         target_language=Language.CHINESE,
     ),
+    video=VideoConfig(
+        embed_subtitle=True,
+        soft_subtitle=False,  # 하드 자막 사용
+        hardware_accel=HardwareAccel.AUTO,
+    ),
+    summary=SummaryConfig(
+        enabled=True,
+        max_key_points=5,
+        include_timeline=True,
+    ),
 )
 
 # 처리 파이프라인 생성
@@ -238,6 +306,15 @@ result = pipeline.process("video.mp4")
 
 print(f"자막 파일: {result['subtitle_file']}")
 print(f"출력 비디오: {result['output_video']}")
+print(f"요약 파일: {result['summary_file']}")
+
+# 요약 데이터 접근
+if result['summary']:
+    summary = result['summary']
+    print(f"제목: {summary.title}")
+    print(f"개요: {summary.overview}")
+    for point in summary.key_points:
+        print(f"  - {point}")
 ```
 
 ## 🤖 Whisper 모델 선택
@@ -279,15 +356,17 @@ class MyTranslator(BaseTranslator):
 ## 📁 출력 파일
 
 - `videoname_{language_code}.srt` - 자막 파일 (예: `video_zh.srt`, `video_ja.srt`)
+- `videoname_{language_code}_summary.json` - 비디오 콘텐츠 요약 JSON 파일 (제목, 개요, 핵심 포인트, 주제, 타임라인)
 - `videoname_{language_code}.mp4` - 자막이 임베드된 비디오 (임베딩 선택 시)
 
 ## ⚠️ 주의사항
 
 1. **첫 실행** 시 Whisper 모델이 자동으로 다운로드됩니다. 안정적인 인터넷 연결을 확인하세요
-2. **하드 자막**은 비디오를 다시 인코딩하므로 시간이 더 걸립니다
+2. **하드 자막**은 비디오를 다시 인코딩하므로 시간이 더 걸립니다. `--hw-accel`로 하드웨어 가속을 활성화하여 인코딩 속도를 향상시킬 수 있습니다
 3. **소프트 자막**은 스트림만 복사하므로 빠르지만 일부 플레이어에서 지원되지 않을 수 있습니다
 4. 시스템에 FFmpeg가 설치되어 있는지 확인하세요
-5. Apple Silicon Mac은 자동으로 MPS 가속을 사용합니다
+5. Apple Silicon Mac은 Whisper에 MPS 가속, 비디오 인코딩에 VideoToolbox를 자동으로 사용합니다
+6. **비디오 요약**은 기본적으로 활성화되어 있으며 번역과 동일한 LLM API를 사용합니다. `--no-summary`로 비활성화할 수 있습니다
 
 ## 🛠️ 개발
 

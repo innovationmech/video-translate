@@ -2,7 +2,7 @@
 
 将视频自动识别语音、翻译成目标语言，并生成字幕文件或嵌入视频。**支持 18 种语言互译**。
 
-[English](README.md) | [日本語ドキュメント](README.ja.md) | [한국어 문서](README.ko.md)
+[English](README.md) | [日本語ドキュメント](README.ja.md) | [한국어 문서](README.ko.md) | [Français](README.fr.md) | [Deutsch](README.de.md)
 
 ## ✨ 功能特点
 
@@ -12,6 +12,9 @@
 - 📄 **字幕生成**: 支持 SRT、VTT、ASS 等多种字幕格式
 - 🎥 **字幕嵌入**: 支持软字幕和硬字幕两种方式
 - 🌍 **双语字幕**: 可选择生成双语字幕
+- 📝 **视频总结**: 基于 LLM 自动生成视频内容总结，包含关键要点、主题标签和时间线
+- ⚡ **硬件加速**: 自动检测硬件编码（VideoToolbox/NVENC/QSV/AMF），大幅提升硬字幕编码速度
+- 🖥️ **GUI 集成**: 支持 JSON 格式进度输出，便于与图形界面集成
 - 💰 **性价比高**: DeepSeek API 价格实惠，翻译质量优秀
 - 🏗️ **模块化设计**: 易于扩展和维护
 
@@ -44,6 +47,7 @@ video-translate/
 │       ├── models.py        # 数据模型
 │       ├── transcriber.py   # 语音识别模块
 │       ├── translator.py    # 翻译模块
+│       ├── summarizer.py    # 视频内容总结模块
 │       ├── subtitle.py      # 字幕处理模块
 │       ├── video.py         # 视频处理模块
 │       ├── pipeline.py      # 处理流水线
@@ -101,7 +105,7 @@ uv pip install video-translate
 
 ```bash
 # 1. 克隆项目
-git clone https://github.com/yourusername/video-translate.git
+git clone https://github.com/innovationmech/video-translate.git
 cd video-translate
 
 # 2. 安装 uv（如未安装）
@@ -166,6 +170,8 @@ video-translate video.mp4 --source fr --target de
 
 ### 命令行选项
 
+**基础选项：**
+
 | 选项 | 说明 |
 |------|------|
 | `-s, --source` | 源语言代码 (默认: en) |
@@ -173,13 +179,49 @@ video-translate video.mp4 --source fr --target de
 | `--list-languages` | 列出所有支持的语言 |
 | `-o, --output` | 指定输出目录 |
 | `-m, --model` | Whisper 模型大小 (tiny/base/small/medium/large) |
+| `-v, --version` | 显示版本号 |
+| `--verbose` | 显示详细日志 |
+
+**翻译选项：**
+
+| 选项 | 说明 |
+|------|------|
 | `--translator` | 翻译引擎 (deepseek/openai) |
 | `--api-key` | 翻译 API Key |
+| `--api-base` | API Base URL (可选，用于自定义端点) |
+| `--llm-model` | LLM 模型名称 (可选，覆盖默认模型) |
+
+**字幕选项：**
+
+| 选项 | 说明 |
+|------|------|
 | `--target-only` | 只输出目标语言字幕，不含原文 |
 | `--source-first` | 源语言在上，目标语言在下 |
+
+**视频选项：**
+
+| 选项 | 说明 |
+|------|------|
 | `--no-embed` | 不嵌入字幕到视频，只生成字幕文件 |
 | `--hard-sub` | 使用硬字幕（烧录到视频中） |
 | `--font-size` | 硬字幕字体大小 (默认: 24) |
+| `--hw-accel` | 硬字幕编码硬件加速 (auto/none/videotoolbox/nvenc/qsv/amf，默认: auto) |
+| `--video-quality` | 硬字幕视频质量，CRF 值 (0-51，越小质量越高，默认: 23) |
+
+**总结选项：**
+
+| 选项 | 说明 |
+|------|------|
+| `--no-summary` | 禁用视频内容总结功能 |
+| `--summary-lang` | 总结语言代码 (默认: 跟随目标语言) |
+| `--max-key-points` | 总结中最多关键点数量 (默认: 5) |
+| `--no-timeline` | 总结中不包含时间线 |
+
+**高级选项：**
+
+| 选项 | 说明 |
+|------|------|
+| `--json-progress` | 输出 JSON 格式的进度信息（用于 GUI 集成） |
 
 ### 更多示例
 
@@ -193,14 +235,29 @@ video-translate video.mp4 --no-embed
 # 生成硬字幕（烧录到视频中）
 video-translate video.mp4 --hard-sub
 
+# 使用 NVIDIA 硬件加速生成高质量硬字幕
+video-translate video.mp4 --hard-sub --hw-accel nvenc --video-quality 18
+
 # 只输出目标语言字幕
 video-translate video.mp4 --target-only
 
 # 使用 OpenAI 翻译
 video-translate video.mp4 --translator openai
 
+# 使用自定义 API 端点和模型
+video-translate video.mp4 --api-base https://your-api.com/v1 --llm-model your-model
+
+# 禁用视频内容总结
+video-translate video.mp4 --no-summary
+
+# 生成英文总结，最多 10 个关键点
+video-translate video.mp4 --summary-lang en --max-key-points 10
+
 # 指定输出目录
 video-translate video.mp4 -o ./output
+
+# JSON 格式进度输出（用于 GUI 集成）
+video-translate video.mp4 --json-progress
 ```
 
 ### 作为库使用
@@ -215,6 +272,7 @@ from video_translate import (
     TranslatorType,
     Language,
 )
+from video_translate.config import SummaryConfig, VideoConfig, HardwareAccel
 
 # 创建配置 - 日语翻译成中文
 config = Config(
@@ -228,6 +286,16 @@ config = Config(
         source_language=Language.JAPANESE,
         target_language=Language.CHINESE,
     ),
+    video=VideoConfig(
+        embed_subtitle=True,
+        soft_subtitle=False,  # 使用硬字幕
+        hardware_accel=HardwareAccel.AUTO,
+    ),
+    summary=SummaryConfig(
+        enabled=True,
+        max_key_points=5,
+        include_timeline=True,
+    ),
 )
 
 # 创建处理流水线
@@ -238,6 +306,15 @@ result = pipeline.process("video.mp4")
 
 print(f"字幕文件: {result['subtitle_file']}")
 print(f"输出视频: {result['output_video']}")
+print(f"总结文件: {result['summary_file']}")
+
+# 访问总结数据
+if result['summary']:
+    summary = result['summary']
+    print(f"标题: {summary.title}")
+    print(f"概述: {summary.overview}")
+    for point in summary.key_points:
+        print(f"  - {point}")
 ```
 
 ## 🤖 Whisper 模型选择
@@ -279,15 +356,17 @@ class MyTranslator(BaseTranslator):
 ## 📁 输出文件
 
 - `视频名_{语言代码}.srt` - 字幕文件（如 `video_zh.srt`, `video_ja.srt`）
+- `视频名_{语言代码}_summary.json` - 视频内容总结 JSON 文件（标题、概述、关键要点、主题标签、时间线）
 - `视频名_{语言代码}.mp4` - 带字幕的视频（如果选择嵌入）
 
 ## ⚠️ 注意事项
 
 1. **首次运行**会自动下载 Whisper 模型，请确保网络畅通
-2. **硬字幕**会重新编码视频，耗时较长
+2. **硬字幕**会重新编码视频，耗时较长；可使用 `--hw-accel` 启用硬件加速以提升编码速度
 3. **软字幕**只复制流，速度快但某些播放器可能不支持
 4. 确保系统已安装 FFmpeg
-5. Apple Silicon Mac 会自动使用 MPS 加速
+5. Apple Silicon Mac 会自动使用 MPS 加速 Whisper 识别，使用 VideoToolbox 加速视频编码
+6. **视频总结**默认启用，使用与翻译相同的 LLM API；可通过 `--no-summary` 禁用
 
 ## 🛠️ 开发
 
