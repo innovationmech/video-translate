@@ -114,9 +114,7 @@ class VideoProcessor:
         for font_name in candidates:
             if font_name and self._font_exists(font_name):
                 if font_name != self.config.font_name:
-                    progress.warning(
-                        f"字幕字体 {self.config.font_name} 不可用，回退到 {font_name}"
-                    )
+                    progress.warning(f"字幕字体 {self.config.font_name} 不可用，回退到 {font_name}")
                 return font_name
 
         progress.warning(

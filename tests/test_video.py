@@ -258,7 +258,9 @@ class TestEmbedSubtitle:
     @patch("subprocess.run")
     def test_resolve_subtitle_font_uses_available_default(self, mock_run):
         """测试可用时优先使用默认字体。"""
-        mock_run.return_value = Mock(returncode=0, stdout='NotoSansCJK-Regular.ttc: "Noto Sans CJK SC"')
+        mock_run.return_value = Mock(
+            returncode=0, stdout='NotoSansCJK-Regular.ttc: "Noto Sans CJK SC"'
+        )
 
         processor = VideoProcessor(VideoConfig(font_name="Noto Sans CJK SC"))
 
@@ -273,7 +275,9 @@ class TestEmbedSubtitle:
             if font_name == "Noto Sans CJK SC":
                 return Mock(returncode=0, stdout='DejaVuSans.ttf: "DejaVu Sans" "Book"')
             if font_name == "Source Han Sans SC":
-                return Mock(returncode=0, stdout='SourceHanSansSC-Regular.otf: "Source Han Sans SC"')
+                return Mock(
+                    returncode=0, stdout='SourceHanSansSC-Regular.otf: "Source Han Sans SC"'
+                )
             return Mock(returncode=0, stdout='DejaVuSans.ttf: "DejaVu Sans" "Book"')
 
         mock_run.side_effect = run_side_effect
