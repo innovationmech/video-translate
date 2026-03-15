@@ -217,7 +217,7 @@ class TestVideoConfig:
         config = VideoConfig()
         assert config.embed_subtitle is True
         assert config.soft_subtitle is True
-        assert config.font_name == "PingFang SC"
+        assert config.font_name == "Noto Sans CJK SC"
         assert config.font_size == 24
 
     def test_hard_subtitle(self):

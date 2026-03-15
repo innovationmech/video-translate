@@ -105,11 +105,11 @@ class SubtitleWriter:
             "Alignment, MarginL, MarginR, MarginV, Encoding"
         )
         style_default = (
-            "Style: Default,PingFang SC,24,&H00FFFFFF,&H000000FF,"
+            "Style: Default,Noto Sans CJK SC,24,&H00FFFFFF,&H000000FF,"
             "&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,2,1,2,10,10,10,1"
         )
         style_target = (
-            "Style: Target,PingFang SC,26,&H00FFFFFF,&H000000FF,"
+            "Style: Target,Noto Sans CJK SC,26,&H00FFFFFF,&H000000FF,"
             "&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,2,1,2,10,10,10,1"
         )
         style_source = (

@@ -62,6 +62,17 @@ class TranslationPipeline:
         target_lang = self.config.translator.target_language.value
         return f"_{target_lang}"
 
+    def _get_output_video_path(self, video_path: Path, output_dir: Path, suffix: str) -> Path:
+        """根据字幕模式选择合适的输出容器。"""
+        output_suffix = video_path.suffix
+
+        # WebM 不支持 H.264/HEVC 硬字幕输出，改用 MP4 容器更稳妥。
+        if self.config.video.embed_subtitle and not self.config.video.soft_subtitle:
+            if video_path.suffix.lower() == ".webm":
+                output_suffix = ".mp4"
+
+        return output_dir / f"{video_path.stem}{suffix}{output_suffix}"
+
     def process(self, video_path: str | Path, output_dir: str | Path | None = None) -> dict:
         """
         处理视频的完整流水线
@@ -90,7 +101,7 @@ class TranslationPipeline:
         suffix = self._get_output_suffix()
         srt_path = output_dir / f"{base_name}{suffix}.srt"
         summary_path = output_dir / f"{base_name}{suffix}_summary.json"
-        video_output_path = output_dir / f"{base_name}{suffix}{video_path.suffix}"
+        video_output_path = self._get_output_video_path(video_path, output_dir, suffix)
 
         # 打印处理信息
         self._print_header(video_path, output_dir)

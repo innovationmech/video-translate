@@ -8,7 +8,8 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from video_translate.config import VideoConfig
+from video_translate.config import Config, TranslatorConfig, VideoConfig
+from video_translate.pipeline import TranslationPipeline
 from video_translate.video import VideoProcessor
 
 
@@ -60,6 +61,11 @@ class TestVideoProcessorInit:
         processor = VideoProcessor(default_video_config)
         assert processor.config == default_video_config
 
+    def test_default_font(self):
+        """测试默认字体使用跨平台中文字体。"""
+        processor = VideoProcessor()
+        assert processor.config.font_name == "Noto Sans CJK SC"
+
 
 class TestSubtitleCodecMap:
     """测试字幕编码映射"""
@@ -83,6 +89,42 @@ class TestSubtitleCodecMap:
         """测试未知格式回退"""
         processor = VideoProcessor()
         assert processor.get_subtitle_codec("video.unknown") == "srt"
+
+
+class TestPipelineOutputPath:
+    """测试输出视频路径选择。"""
+
+    def test_hard_sub_webm_uses_mp4_output(self):
+        """测试 WebM 硬字幕输出自动切换为 MP4。"""
+        config = Config(
+            translator=TranslatorConfig(api_key="test-api-key"),
+            video=VideoConfig(embed_subtitle=True, soft_subtitle=False),
+        )
+        pipeline = TranslationPipeline(config)
+
+        output_path = pipeline._get_output_video_path(
+            Path("sample.webm"),
+            Path("/tmp"),
+            "_zh",
+        )
+
+        assert output_path == Path("/tmp/sample_zh.mp4")
+
+    def test_soft_sub_preserves_original_container(self):
+        """测试软字幕仍保留原始容器。"""
+        config = Config(
+            translator=TranslatorConfig(api_key="test-api-key"),
+            video=VideoConfig(embed_subtitle=True, soft_subtitle=True),
+        )
+        pipeline = TranslationPipeline(config)
+
+        output_path = pipeline._get_output_video_path(
+            Path("sample.webm"),
+            Path("/tmp"),
+            "_zh",
+        )
+
+        assert output_path == Path("/tmp/sample_zh.webm")
 
 
 class TestCheckFFmpeg:
@@ -136,7 +178,8 @@ class TestEmbedSubtitle:
 
     @patch.object(VideoProcessor, "check_ffmpeg", return_value=True)
     @patch.object(VideoProcessor, "_run_ffmpeg")
-    def test_embed_hard_subtitle(self, mock_run_ffmpeg, mock_check, temp_dir):
+    @patch.object(VideoProcessor, "_resolve_subtitle_font", return_value="Noto Sans CJK SC")
+    def test_embed_hard_subtitle(self, mock_resolve_font, mock_run_ffmpeg, mock_check, temp_dir):
         """测试嵌入硬字幕"""
         video_file = temp_dir / "test.mp4"
         video_file.touch()
@@ -152,6 +195,7 @@ class TestEmbedSubtitle:
         mock_run_ffmpeg.assert_called_once()
         call_args = mock_run_ffmpeg.call_args[0][0]
         assert "-filter_script:v" in call_args  # 硬字幕使用 filter_script
+        mock_resolve_font.assert_called_once()
 
     def test_embed_video_not_found(self, temp_dir):
         """测试视频文件不存在"""
@@ -210,6 +254,32 @@ class TestEmbedSubtitle:
 
         call_args = mock_run_ffmpeg.call_args[0][0]
         assert "-filter_script:v" in call_args  # 应该使用硬字幕 (filter_script)
+
+    @patch("subprocess.run")
+    def test_resolve_subtitle_font_uses_available_default(self, mock_run):
+        """测试可用时优先使用默认字体。"""
+        mock_run.return_value = Mock(returncode=0, stdout='NotoSansCJK-Regular.ttc: "Noto Sans CJK SC"')
+
+        processor = VideoProcessor(VideoConfig(font_name="Noto Sans CJK SC"))
+
+        assert processor._resolve_subtitle_font() == "Noto Sans CJK SC"
+
+    @patch("subprocess.run")
+    def test_resolve_subtitle_font_falls_back_when_default_missing(self, mock_run):
+        """测试默认字体不存在时回退到可用中文字体。"""
+
+        def run_side_effect(cmd, capture_output, text, check=False):
+            font_name = cmd[1]
+            if font_name == "Noto Sans CJK SC":
+                return Mock(returncode=0, stdout='DejaVuSans.ttf: "DejaVu Sans" "Book"')
+            if font_name == "Source Han Sans SC":
+                return Mock(returncode=0, stdout='SourceHanSansSC-Regular.otf: "Source Han Sans SC"')
+            return Mock(returncode=0, stdout='DejaVuSans.ttf: "DejaVu Sans" "Book"')
+
+        mock_run.side_effect = run_side_effect
+        processor = VideoProcessor(VideoConfig(font_name="Noto Sans CJK SC"))
+
+        assert processor._resolve_subtitle_font() == "Source Han Sans SC"
 
 
 class TestRunFFmpeg:
