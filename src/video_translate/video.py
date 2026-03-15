@@ -81,6 +81,49 @@ class VideoProcessor:
         self.config = config or VideoConfig()
 
     @staticmethod
+    def _font_exists(font_name: str) -> bool:
+        """检查 fontconfig 是否能找到指定字体。"""
+        try:
+            result = subprocess.run(
+                ["fc-match", font_name],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+        except FileNotFoundError:
+            return False
+
+        if result.returncode != 0:
+            return False
+
+        output = result.stdout.strip()
+        return bool(output) and "DejaVuSans.ttf" not in output.replace(" ", "")
+
+    def _resolve_subtitle_font(self) -> str:
+        """选择本机可用的字幕字体，优先中文字体。"""
+        candidates = [
+            self.config.font_name,
+            "Source Han Sans SC",
+            "WenQuanYi Zen Hei",
+            "Microsoft YaHei",
+            "SimHei",
+            "Arial Unicode MS",
+            "PingFang SC",
+        ]
+
+        for font_name in candidates:
+            if font_name and self._font_exists(font_name):
+                if font_name != self.config.font_name:
+                    progress.warning(f"字幕字体 {self.config.font_name} 不可用，回退到 {font_name}")
+                return font_name
+
+        progress.warning(
+            f"未检测到可用的中文字体，当前将尝试使用 {self.config.font_name}，"
+            "硬字幕可能显示为方框。请安装 Noto Sans CJK SC 等 CJK 字体。"
+        )
+        return self.config.font_name
+
+    @staticmethod
     def is_supported(file_path: str | Path) -> bool:
         """检查是否为支持的视频格式"""
         ext = Path(file_path).suffix.lower()
@@ -243,9 +286,10 @@ class VideoProcessor:
             shutil.copy(subtitle_path, temp_srt)
 
             # 字体样式 - ASS override tags 格式
+            font_name = self._resolve_subtitle_font()
             font_style = (
                 f"FontSize={self.config.font_size},"
-                f"FontName={self.config.font_name},"
+                f"FontName={font_name},"
                 "PrimaryColour=&HFFFFFF,"
                 "OutlineColour=&H000000,"
                 "Outline=2"

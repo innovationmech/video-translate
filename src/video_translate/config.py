@@ -169,7 +169,7 @@ class VideoConfig:
 
     embed_subtitle: bool = True  # 是否嵌入字幕
     soft_subtitle: bool = True  # 软字幕（vs 硬字幕）
-    font_name: str = "PingFang SC"
+    font_name: str = "Noto Sans CJK SC"
     font_size: int = 24
     hardware_accel: HardwareAccel = HardwareAccel.AUTO  # 硬件加速（硬字幕编码时使用）
     video_quality: int = 23  # 视频质量 (CRF/CQ 值，越小质量越高，范围 0-51)

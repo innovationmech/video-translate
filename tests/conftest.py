@@ -90,7 +90,7 @@ def default_subtitle_config():
 def default_video_config():
     """创建默认视频配置"""
     return VideoConfig(
-        embed_subtitle=True, soft_subtitle=True, font_name="PingFang SC", font_size=24
+        embed_subtitle=True, soft_subtitle=True, font_name="Noto Sans CJK SC", font_size=24
     )
 
 
