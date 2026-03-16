@@ -4,7 +4,7 @@
 将英文视频自动识别语音、翻译成中文，并生成字幕文件或嵌入视频。
 """
 
-__version__ = "1.1.0"
+__version__ = "1.1.1"
 __author__ = "innovationmech"
 
 from .config import Config, Language, TranslatorType, WhisperModel
