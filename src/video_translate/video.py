@@ -6,6 +6,7 @@ import os
 import subprocess
 import sys
 from collections.abc import Callable
+from functools import lru_cache
 from pathlib import Path
 from typing import TypedDict
 
@@ -59,6 +60,36 @@ def get_ffmpeg_path() -> str:
 def get_ffprobe_path() -> str:
     """获取 FFprobe 可执行文件路径，支持环境变量覆盖"""
     return os.environ.get("FFPROBE_PATH", "ffprobe")
+
+
+@lru_cache(maxsize=4)
+def _probe_filter_script_option(ffmpeg: str) -> str:
+    """探测该 FFmpeg 支持哪种"从文件读取 filtergraph"的选项。
+
+    FFmpeg 9.0 移除了 -filter_script，需改用通用的 -/filter 语法（FFmpeg 7.1 起可用）。
+    这里用一条只解析参数、不做实际转码的命令来探测：如果 -filter_script 不被识别，
+    FFmpeg 会在参数解析阶段报 "Unrecognized option"。
+    """
+    fallback = "-/filter:v"
+    try:
+        result = subprocess.run(
+            [ffmpeg, "-hide_banner", "-filter_script:v", os.devnull],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except (FileNotFoundError, OSError):
+        return fallback
+
+    output = (result.stderr or "") + (result.stdout or "")
+    if "Unrecognized option" in output and "filter_script" in output:
+        return fallback
+    return "-filter_script:v"
+
+
+def get_filter_script_option() -> str:
+    """获取当前 FFmpeg 可用的 filtergraph 脚本选项"""
+    return _probe_filter_script_option(get_ffmpeg_path())
 
 
 class VideoProcessor:
@@ -299,7 +330,7 @@ class VideoProcessor:
             encoder_settings = self.get_encoder_settings(self.config.hardware_accel)
 
             # 创建 filtergraph 脚本文件，避免命令行转义问题
-            # FFmpeg 8.0+ 对命令行转义非常严格，使用 filter_script 更可靠
+            # FFmpeg 8.0+ 对命令行转义非常严格，从脚本文件读取 filtergraph 更可靠
             filter_script = Path(temp_dir) / "filter.txt"
 
             # 在 filter script 中，路径需要转义特殊字符（冒号、反斜杠、单引号）
@@ -318,7 +349,7 @@ class VideoProcessor:
                 "-y",
                 "-i",
                 str(video_path),
-                "-filter_script:v",
+                get_filter_script_option(),
                 str(filter_script),
             ]
 
