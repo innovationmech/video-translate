@@ -10,7 +10,15 @@ import pytest
 
 from video_translate.config import Config, TranslatorConfig, VideoConfig
 from video_translate.pipeline import TranslationPipeline
-from video_translate.video import VideoProcessor
+from video_translate.video import (
+    VideoProcessor,
+    _probe_filter_script_option,
+    get_filter_script_option,
+)
+
+# 不同 FFmpeg 版本使用不同的 filtergraph 脚本选项：
+# <= 8.x 支持 -filter_script，9.0 起只支持通用的 -/filter
+FILTER_SCRIPT_OPTIONS = {"-filter_script:v", "-/filter:v"}
 
 
 class TestVideoProcessorStatic:
@@ -194,7 +202,8 @@ class TestEmbedSubtitle:
 
         mock_run_ffmpeg.assert_called_once()
         call_args = mock_run_ffmpeg.call_args[0][0]
-        assert "-filter_script:v" in call_args  # 硬字幕使用 filter_script
+        # 硬字幕从脚本文件读取 filtergraph（选项名随 FFmpeg 版本不同）
+        assert any(arg in FILTER_SCRIPT_OPTIONS for arg in call_args)
         mock_resolve_font.assert_called_once()
 
     def test_embed_video_not_found(self, temp_dir):
@@ -253,7 +262,8 @@ class TestEmbedSubtitle:
         )
 
         call_args = mock_run_ffmpeg.call_args[0][0]
-        assert "-filter_script:v" in call_args  # 应该使用硬字幕 (filter_script)
+        # 应该使用硬字幕（从脚本文件读取 filtergraph）
+        assert any(arg in FILTER_SCRIPT_OPTIONS for arg in call_args)
 
     @patch("subprocess.run")
     def test_resolve_subtitle_font_uses_available_default(self, mock_run):
@@ -363,3 +373,40 @@ class TestVideoConfig:
         processor = VideoProcessor(config)
 
         assert processor.config.embed_subtitle is False
+
+
+class TestFilterScriptOption:
+    """测试 filtergraph 脚本选项的版本探测"""
+
+    def setup_method(self):
+        _probe_filter_script_option.cache_clear()
+
+    def teardown_method(self):
+        _probe_filter_script_option.cache_clear()
+
+    @patch("subprocess.run")
+    def test_legacy_ffmpeg_uses_filter_script(self, mock_run):
+        """FFmpeg <= 8.x 接受 -filter_script"""
+        mock_run.return_value = Mock(
+            returncode=1, stdout="", stderr="At least one output file must be specified"
+        )
+
+        assert get_filter_script_option() == "-filter_script:v"
+
+    @patch("subprocess.run")
+    def test_ffmpeg_9_uses_generic_filter_option(self, mock_run):
+        """FFmpeg 9.0 移除了 -filter_script，改用 -/filter"""
+        mock_run.return_value = Mock(
+            returncode=1,
+            stdout="",
+            stderr="Unrecognized option 'filter_script:v'.\nError splitting the argument list",
+        )
+
+        assert get_filter_script_option() == "-/filter:v"
+
+    @patch("subprocess.run")
+    def test_ffmpeg_missing_falls_back_to_generic_option(self, mock_run):
+        """FFmpeg 不可用时回退到新语法"""
+        mock_run.side_effect = FileNotFoundError()
+
+        assert get_filter_script_option() == "-/filter:v"
