@@ -2,6 +2,7 @@
 处理流水线模块 - 整合各模块完成视频翻译
 """
 
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -48,17 +49,29 @@ class TranslationPipeline:
     @property
     def subtitle_writer(self) -> SubtitleWriter:
         if self._subtitle_writer is None:
-            self._subtitle_writer = SubtitleWriter(self.config.subtitle)
+            subtitle_config = self.config.subtitle
+            if self.config.source_only:
+                subtitle_config = replace(subtitle_config, target_only=False, bilingual=False)
+            self._subtitle_writer = SubtitleWriter(subtitle_config)
         return self._subtitle_writer
 
     @property
     def video_processor(self) -> VideoProcessor:
         if self._video_processor is None:
-            self._video_processor = VideoProcessor(self.config.video)
+            subtitle_language = (
+                self.config.transcriber.language
+                if self.config.source_only
+                else self.config.translator.target_language.value
+            )
+            self._video_processor = VideoProcessor(
+                replace(self.config.video, subtitle_language=subtitle_language)
+            )
         return self._video_processor
 
     def _get_output_suffix(self) -> str:
         """获取输出文件的后缀标识"""
+        if self.config.source_only:
+            return f"_{self.config.transcriber.language}_original"
         target_lang = self.config.translator.target_language.value
         return f"_{target_lang}"
 
@@ -92,11 +105,11 @@ class TranslationPipeline:
         # 设置输出目录
         if output_dir:
             output_dir = Path(output_dir)
-            output_dir.mkdir(parents=True, exist_ok=True)
         else:
             output_dir = self.config.output_dir or video_path.parent
+        output_dir.mkdir(parents=True, exist_ok=True)
 
-        # 生成输出文件名（使用目标语言代码作为后缀）
+        # 生成输出文件名
         base_name = video_path.stem
         suffix = self._get_output_suffix()
         srt_path = output_dir / f"{base_name}{suffix}.srt"
@@ -107,7 +120,8 @@ class TranslationPipeline:
         self._print_header(video_path, output_dir)
 
         # 计算总步骤数
-        total_steps = 5 if self.config.summary.enabled else 4
+        enable_summary = self.config.summary.enabled and not self.config.source_only
+        total_steps = 3 + int(not self.config.source_only) + int(enable_summary)
 
         result: dict[str, Any] = {
             "input_video": video_path,
@@ -118,27 +132,28 @@ class TranslationPipeline:
         }
 
         # 步骤 1: 语音识别
-        progress.step(1, total_steps, "语音识别")
+        progress.step(1, total_steps, "语音识别", step_name="transcribing")
         progress.progress(0, "正在加载 Whisper 模型...")
         progress.progress(10, "正在提取音频...")
         transcription = self.transcriber.transcribe(video_path)
         segments = transcription.segments
         progress.progress(100, f"识别到 {len(segments)} 条字幕")
 
-        # 步骤 2: 翻译
-        progress.step(2, total_steps, "翻译字幕")
-        progress.progress(0, "正在初始化翻译引擎...")
-        translation = self.translator.translate_segments(
-            segments,
-            progress_callback=lambda p, m: progress.progress(p, m) if self.json_mode else None,
-        )
-        segments = translation.segments
-        progress.progress(100, "翻译完成")
+        current_step = 2
+        if not self.config.source_only:
+            progress.step(current_step, total_steps, "翻译字幕", step_name="translating")
+            progress.progress(0, "正在初始化翻译引擎...")
+            translation = self.translator.translate_segments(
+                segments,
+                progress_callback=lambda p, m: progress.progress(p, m) if self.json_mode else None,
+            )
+            segments = translation.segments
+            progress.progress(100, "翻译完成")
+            current_step += 1
 
         # 步骤 3: 生成总结（可选）
-        current_step = 3
-        if self.config.summary.enabled:
-            progress.step(current_step, total_steps, "生成总结")
+        if enable_summary:
+            progress.step(current_step, total_steps, "生成总结", step_name="summarizing")
             progress.progress(0, "正在分析视频内容...")
             try:
                 summary_result = self.summarizer.summarize(
@@ -162,7 +177,7 @@ class TranslationPipeline:
             current_step += 1
 
         # 步骤 4: 生成字幕文件
-        progress.step(current_step, total_steps, "生成字幕文件")
+        progress.step(current_step, total_steps, "生成字幕文件", step_name="generating")
         progress.progress(0, "正在写入字幕文件...")
         self.subtitle_writer.write(segments, srt_path)
         result["subtitle_file"] = srt_path
@@ -174,6 +189,7 @@ class TranslationPipeline:
             current_step,
             total_steps,
             "嵌入字幕" if self.config.video.embed_subtitle else "跳过字幕嵌入",
+            step_name="embedding",
         )
         if self.config.video.embed_subtitle:
             progress.progress(0, "正在嵌入字幕到视频...")
@@ -205,13 +221,17 @@ class TranslationPipeline:
         target_lang = get_language_name(self.config.translator.target_language)
 
         progress.separator()
-        progress.header("视频翻译工具")
+        progress.header("原生字幕工具" if self.config.source_only else "视频翻译工具")
         print(f"📁 输入视频: {video_path}")
         print(f"📁 输出目录: {output_dir}")
         print(f"🤖 Whisper 模型: {self.config.transcriber.model_name}")
-        print(f"🌐 翻译引擎: {self.translator.name}")
-        print(f"🔤 翻译方向: {source_lang} → {target_lang}")
-        print(f"📝 内容总结: {'启用' if self.config.summary.enabled else '禁用'}")
+        if self.config.source_only:
+            print(f"🔤 原生字幕语言: {self.config.transcriber.language}")
+        else:
+            print(f"🌐 翻译引擎: {self.translator.name}")
+            print(f"🔤 翻译方向: {source_lang} → {target_lang}")
+        enable_summary = self.config.summary.enabled and not self.config.source_only
+        print(f"📝 内容总结: {'启用' if enable_summary else '禁用'}")
         progress.separator()
         print()
 

@@ -52,6 +52,8 @@ jobs:
     - name: 上传覆盖率报告到 Codecov
       uses: codecov/codecov-action@v4
       if: matrix.python-version == '3.12'
+      # 覆盖率上传是可选步骤；上传工具自身的网络异常也不应阻断测试任务。
+      continue-on-error: true
       with:
         file: ./coverage.xml
         flags: unittests

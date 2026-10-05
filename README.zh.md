@@ -12,6 +12,7 @@
 - 📄 **字幕生成**: 支持 SRT、VTT、ASS 等多种字幕格式
 - 🎥 **字幕嵌入**: 支持软字幕和硬字幕两种方式
 - 🌍 **双语字幕**: 可选择生成双语字幕
+- 🎤 **原生字幕**: 保留视频原语言，跳过翻译和总结，无需 API Key
 - 📝 **视频总结**: 基于 LLM 自动生成视频内容总结，包含关键要点、主题标签和时间线
 - ⚡ **硬件加速**: 自动检测硬件编码（VideoToolbox/NVENC/QSV/AMF），大幅提升硬字幕编码速度
 - 🖥️ **GUI 集成**: 支持 JSON 格式进度输出，便于与图形界面集成
@@ -168,6 +169,24 @@ video-translate video.mp4 --source ko --target ja
 video-translate video.mp4 --source fr --target de
 ```
 
+### 添加原生字幕
+
+桌面应用首页选择「字幕模式 → 原生字幕」，设置视频的源语言后添加视频。
+此模式只进行语音识别，跳过翻译和内容总结，无需配置 API Key；字幕嵌入方式沿用设置中的软字幕或硬字幕选项。
+
+```bash
+# 生成日语原生字幕并嵌入视频
+video-translate video.mp4 --source ja --source-only
+
+# 只导出英语原生字幕文件
+video-translate video.mp4 --source en --source-only --no-embed
+
+# 将中文原生字幕烧录到视频
+video-translate video.mp4 --source zh --source-only --hard-sub
+```
+
+输出示例：`video_ja_original.srt` 和 `video_ja_original.mp4`。
+
 ### 命令行选项
 
 **基础选项：**
@@ -177,6 +196,7 @@ video-translate video.mp4 --source fr --target de
 | `-s, --source` | 源语言代码 (默认: en) |
 | `-t, --target` | 目标语言代码 (默认: zh) |
 | `--list-languages` | 列出所有支持的语言 |
+| `--source-only` | 只生成原语言字幕，跳过翻译和总结，无需 API Key |
 | `-o, --output` | 指定输出目录 |
 | `-m, --model` | Whisper 模型大小 (tiny/base/small/medium/large) |
 | `-v, --version` | 显示版本号 |

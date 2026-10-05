@@ -160,6 +160,15 @@ class TestCheckFFmpeg:
 class TestEmbedSubtitle:
     """测试字幕嵌入"""
 
+    @pytest.mark.parametrize("language,metadata", [("en", "eng"), ("ja", "jpn"), ("zh", "chi")])
+    @patch.object(VideoProcessor, "_run_ffmpeg")
+    def test_soft_subtitle_language(self, mock_run_ffmpeg, language, metadata, temp_dir):
+        processor = VideoProcessor(VideoConfig(subtitle_language=language))
+        processor._embed_soft_subtitle(
+            temp_dir / "video.mp4", temp_dir / "subtitle.srt", temp_dir / "output.mp4"
+        )
+        assert f"language={metadata}" in mock_run_ffmpeg.call_args.args[0]
+
     @patch.object(VideoProcessor, "check_ffmpeg", return_value=True)
     @patch.object(VideoProcessor, "_run_ffmpeg")
     def test_embed_soft_subtitle(self, mock_run_ffmpeg, mock_check, temp_dir):
