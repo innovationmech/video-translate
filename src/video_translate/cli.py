@@ -61,6 +61,9 @@ def create_parser() -> argparse.ArgumentParser:
   # 只输出目标语言字幕（不含原文）
   video-translate video.mp4 --target-only
 
+  # 添加原生字幕（保留视频原语言，无需 API Key）
+  video-translate video.mp4 --source ja --source-only
+
   # 使用 OpenAI 翻译
   video-translate video.mp4 --translator openai
 
@@ -109,6 +112,12 @@ def create_parser() -> argparse.ArgumentParser:
     parser.add_argument("--llm-model", help="LLM 模型名称 (可选)")
 
     # 字幕选项
+    parser.add_argument(
+        "--source-only",
+        action="store_true",
+        help="只生成原语言字幕，跳过翻译和总结，无需 API Key",
+    )
+
     parser.add_argument("--target-only", action="store_true", help="只输出目标语言字幕，不包含原文")
 
     parser.add_argument("--source-first", action="store_true", help="源语言在上，目标语言在下")
@@ -230,7 +239,7 @@ def build_config(args: argparse.Namespace) -> Config:
     config = Config(
         transcriber=TranscriberConfig(
             model=whisper_model,
-            language=args.source,  # Whisper 使用源语言
+            language=source_lang.value,  # Whisper 使用源语言
         ),
         translator=TranslatorConfig(
             type=translator_type,
@@ -253,12 +262,13 @@ def build_config(args: argparse.Namespace) -> Config:
             video_quality=args.video_quality,
         ),
         summary=SummaryConfig(
-            enabled=not args.no_summary,
+            enabled=not args.no_summary and not args.source_only,
             language=summary_lang,
             max_key_points=args.max_key_points,
             include_timeline=not args.no_timeline,
         ),
         output_dir=Path(args.output) if args.output else None,
+        source_only=args.source_only,
     )
 
     return config

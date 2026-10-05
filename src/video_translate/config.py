@@ -173,6 +173,7 @@ class VideoConfig:
     font_size: int = 24
     hardware_accel: HardwareAccel = HardwareAccel.AUTO  # 硬件加速（硬字幕编码时使用）
     video_quality: int = 23  # 视频质量 (CRF/CQ 值，越小质量越高，范围 0-51)
+    subtitle_language: str = "zh"  # 软字幕轨道语言
 
 
 @dataclass
@@ -195,6 +196,7 @@ class Config:
     video: VideoConfig = field(default_factory=VideoConfig)
     summary: SummaryConfig = field(default_factory=SummaryConfig)
     output_dir: Path | None = None
+    source_only: bool = False  # 只生成原语言字幕，跳过翻译和总结
 
     @classmethod
     def from_env(cls) -> "Config":
@@ -207,7 +209,10 @@ class Config:
 
     def validate(self) -> list[str]:
         """验证配置，返回错误列表"""
-        errors = []
+        errors: list[str] = []
+
+        if self.source_only:
+            return errors
 
         if not self.translator.api_key:
             errors.append("未设置翻译 API Key")

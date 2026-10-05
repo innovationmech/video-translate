@@ -13,6 +13,28 @@ from typing import TypedDict
 from .config import HardwareAccel, VideoConfig
 from .utils import progress
 
+# FFmpeg 软字幕元数据使用 ISO 639-2 三字母代码。
+SUBTITLE_LANGUAGE_CODES = {
+    "zh": "chi",
+    "en": "eng",
+    "ja": "jpn",
+    "ko": "kor",
+    "fr": "fre",
+    "de": "ger",
+    "es": "spa",
+    "ru": "rus",
+    "pt": "por",
+    "it": "ita",
+    "nl": "dut",
+    "pl": "pol",
+    "tr": "tur",
+    "ar": "ara",
+    "hi": "hin",
+    "th": "tha",
+    "vi": "vie",
+    "id": "ind",
+}
+
 
 class EncoderConfig(TypedDict):
     """硬件编码器配置"""
@@ -285,6 +307,9 @@ class VideoProcessor:
     def _embed_soft_subtitle(self, video_path: Path, subtitle_path: Path, output_path: Path):
         """嵌入软字幕（可关闭）"""
         subtitle_codec = self.get_subtitle_codec(output_path)
+        language = SUBTITLE_LANGUAGE_CODES.get(
+            self.config.subtitle_language, self.config.subtitle_language
+        )
 
         cmd = [
             get_ffmpeg_path(),
@@ -300,7 +325,7 @@ class VideoProcessor:
             "-c:s",
             subtitle_codec,
             "-metadata:s:s:0",
-            "language=chi",
+            f"language={language}",
             str(output_path),
         ]
 

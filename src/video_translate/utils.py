@@ -90,6 +90,7 @@ class ProgressReporter:
         self.use_emoji = use_emoji
         self.json_mode = json_mode
         self._current_step = 0
+        self._current_step_name = "processing"
         self._total_steps = 5
         self._step_names = {
             1: "transcribing",
@@ -135,17 +136,17 @@ class ProgressReporter:
         else:
             print(f"{self._icon('⚠️ ')}  {message}")
 
-    def step(self, step_num: int, total: int, message: str):
+    def step(self, step_num: int, total: int, message: str, step_name: str | None = None):
         self._current_step = step_num
         self._total_steps = total
+        self._current_step_name = step_name or self._step_names.get(step_num, "processing")
         if self.json_mode:
-            step_name = self._step_names.get(step_num, "processing")
             self._emit_json(
                 {
                     "type": "progress",
                     "step": step_num,
                     "total_steps": total,
-                    "step_name": step_name,
+                    "step_name": self._current_step_name,
                     "percent": 0,
                     "message": message,
                 }
@@ -156,13 +157,12 @@ class ProgressReporter:
     def progress(self, percent: int, message: str | None = None):
         """报告当前步骤的进度百分比"""
         if self.json_mode:
-            step_name = self._step_names.get(self._current_step, "processing")
             self._emit_json(
                 {
                     "type": "progress",
                     "step": self._current_step,
                     "total_steps": self._total_steps,
-                    "step_name": step_name,
+                    "step_name": self._current_step_name,
                     "percent": percent,
                     "message": message,
                 }

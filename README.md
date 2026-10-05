@@ -12,6 +12,7 @@ Automatically transcribe video audio, translate to target language, and generate
 - 📄 **Subtitle Generation**: Supports multiple subtitle formats including SRT, VTT, ASS
 - 🎥 **Subtitle Embedding**: Supports both soft and hard subtitle methods
 - 🌍 **Bilingual Subtitles**: Optional bilingual subtitle generation
+- 🎤 **Original-language Subtitles**: Transcribe without translation or summarization; no API key required
 - 📝 **Video Summary**: LLM-powered video content summarization with key points, topics, and timeline
 - ⚡ **Hardware Acceleration**: Auto-detect hardware encoding (VideoToolbox/NVENC/QSV/AMF) for faster hard subtitle rendering
 - 🖥️ **GUI Integration**: JSON progress output for seamless integration with graphical interfaces
@@ -145,6 +146,23 @@ video-translate video.mp4
 # Or use python -m
 python -m video_translate video.mp4
 ```
+
+### Original-language Subtitles
+
+In the desktop app, select **原生字幕** (original-language subtitles) under subtitle mode and choose the video's source language. This mode skips translation and summarization, requires no API key, and supports both soft and hard subtitle embedding.
+
+```bash
+# Add Japanese subtitles without translation
+video-translate video.mp4 --source ja --source-only
+
+# Export English subtitles without embedding
+video-translate video.mp4 --source en --source-only --no-embed
+
+# Burn Chinese subtitles into the video
+video-translate video.mp4 --source zh --source-only --hard-sub
+```
+
+Output example: `video_ja_original.srt` and `video_ja_original.mp4`.
 
 ### Multi-language Translation Examples
 
