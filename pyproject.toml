@@ -27,6 +27,7 @@ classifiers = [
 ]
 
 dependencies = [
+    "argcomplete>=3.5.0",
     "openai-whisper>=20231117",
     "openai>=1.0.0",
     "torch>=2.0.0",

@@ -147,6 +147,33 @@ video-translate video.mp4
 python -m video_translate video.mp4
 ```
 
+### Tab 自动补全
+
+支持补全选项名、语言代码、Whisper 模型、翻译引擎、硬件加速模式、视频路径和输出目录。
+在当前终端启用：
+
+```bash
+# Zsh（macOS 默认）：如果尚未初始化补全，先运行第一行
+autoload -Uz compinit && compinit
+eval "$(video-translate --print-completion zsh)"
+
+# Bash
+eval "$(video-translate --print-completion bash)"
+```
+
+```fish
+# Fish
+video-translate --print-completion fish | source
+```
+
+如需每次打开终端自动启用，将对应命令加入 `~/.zshrc`、`~/.bashrc` 或
+`~/.config/fish/config.fish`。Zsh 的注册命令应放在 `compinit` 之后。
+请确保 `video-translate` 命令位于 `PATH` 中；在本仓库开发时，先执行
+`source .venv/bin/activate`。生成补全脚本无需视频文件或 API Key。
+
+输入 `video-translate --sou` 或 `video-translate video.mp4 --model m` 后按 Tab 即可补全。
+补全注册针对 `video-translate` 命令。
+
 ### 多语言翻译示例
 
 ```bash
