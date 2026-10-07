@@ -147,6 +147,33 @@ video-translate video.mp4
 python -m video_translate video.mp4
 ```
 
+### Tab Completion
+
+Tab completion supports option names, language codes, Whisper models, translation engines,
+hardware acceleration modes, video paths, and output directories. Enable it once per shell:
+
+```bash
+# Zsh (macOS default): initialize completion first if your shell has not done so
+autoload -Uz compinit && compinit
+eval "$(video-translate --print-completion zsh)"
+
+# Bash
+eval "$(video-translate --print-completion bash)"
+```
+
+```fish
+# Fish
+video-translate --print-completion fish | source
+```
+
+For persistent completion, add the corresponding command to `~/.zshrc`, `~/.bashrc`,
+or `~/.config/fish/config.fish`. Keep the Zsh registration after `compinit`.
+The `video-translate` command must be on `PATH`; when working from this repository,
+run `source .venv/bin/activate` first. Completion registration needs no video file or API key.
+
+Try typing `video-translate --sou` or `video-translate video.mp4 --model m`, then press Tab.
+Completion is registered for the `video-translate` command.
+
 ### Original-language Subtitles
 
 In the desktop app, select **原生字幕** (original-language subtitles) under subtitle mode and choose the video's source language. This mode skips translation and summarization, requires no API key, and supports both soft and hard subtitle embedding.

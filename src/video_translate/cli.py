@@ -2,9 +2,14 @@
 命令行接口模块
 """
 
+# PYTHON_ARGCOMPLETE_OK
+
 import argparse
 import sys
 from pathlib import Path
+
+import argcomplete
+from argcomplete.completers import ChoicesCompleter, DirectoriesCompleter, SuppressCompleter
 
 from . import __version__
 from .config import (
@@ -24,6 +29,14 @@ from .pipeline import TranslationPipeline
 
 # 支持的语言代码列表
 SUPPORTED_LANGUAGES = Language.list_codes()
+
+
+class PrintCompletionAction(argparse.Action):
+    """打印 shell 注册脚本并退出，无需视频文件或 API Key。"""
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        print(argcomplete.shellcode([parser.prog], shell=values, use_defaults=False))
+        parser.exit()
 
 
 def create_parser() -> argparse.ArgumentParser:
@@ -180,12 +193,37 @@ def create_parser() -> argparse.ArgumentParser:
 
     parser.add_argument("--verbose", action="store_true", help="显示详细日志")
 
+    parser.add_argument(
+        "--print-completion",
+        choices=["bash", "zsh", "fish"],
+        action=PrintCompletionAction,
+        help="打印指定 shell 的 Tab 补全脚本并退出",
+    )
+
     # JSON 进度输出（用于 GUI 集成）
     parser.add_argument(
         "--json-progress",
         action="store_true",
         help="输出 JSON 格式的进度信息（用于 GUI 集成）",
     )
+
+    # 语言仍由 parse_language 解析，以保留大小写和别名支持。
+    # 自由文本和数字不补全文件名；视频路径使用 argcomplete 默认文件补全。
+    language_choices = {lang.value: get_language_name(lang) for lang in Language}
+    for argument in parser._actions:
+        if argument.dest in {"source", "target", "summary_lang"}:
+            argument.completer = ChoicesCompleter(language_choices)  # type: ignore[attr-defined]
+        elif argument.dest == "output":
+            argument.completer = DirectoriesCompleter()  # type: ignore[attr-defined]
+        elif argument.dest in {
+            "api_key",
+            "api_base",
+            "llm_model",
+            "font_size",
+            "video_quality",
+            "max_key_points",
+        }:
+            argument.completer = SuppressCompleter()  # type: ignore[attr-defined]
 
     return parser
 
@@ -279,6 +317,7 @@ def main(argv: list[str] | None = None):
     from .utils import progress
 
     parser = create_parser()
+    argcomplete.autocomplete(parser)
     args = parser.parse_args(argv)
 
     # 启用 JSON 进度模式
